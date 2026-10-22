@@ -303,6 +303,35 @@ Rod reportou 2 coisas:
 Publicado nos dois lugares (Artifact via `game.html` + commit/push em
 `main` e `gh-pages`).
 
+## Correção 2026-10-23 (11ª rodada) — Firefox AINDA escurecia botões (fix anterior não bastou)
+
+Rod reportou de volta, em caps: "AINDA ESTA ESCURECENDO OS BOTOES" — o
+primeiro fix (`appearance:none` + hover/active/focus `background:transparent`)
+não resolveu. Causa provável: Firefox também aplica `box-shadow`/`filter`
+próprios em `:hover`/`:active`/`:focus` no `<button>` nativo, e
+`::-moz-focus-inner` soma um padding+borda interna invisível que participa
+do escurecimento — e a especificidade do UA stylesheet do Firefox é
+diferente da do Chrome, então as regras antigas sem `!important` podiam
+estar perdendo a disputa.
+
+Reset bem mais agressivo aplicado:
+```css
+button{
+  appearance:none !important; -webkit-appearance:none !important; -moz-appearance:none !important;
+  background:transparent !important; border:0 !important; outline:0 !important;
+  box-shadow:none !important; filter:none !important; color:inherit;
+}
+button::-moz-focus-inner{ border:0 !important; padding:0 !important; outline:0 !important; }
+button:hover, button:active, button:focus, button:focus-visible{
+  background:transparent !important; box-shadow:none !important; filter:none !important;
+}
+```
+
+Publicado no Artifact + commit/push `main` + `gh-pages` nesta rodada.
+**Não consigo testar Firefox com as ferramentas que tenho (só Chrome via
+claude-in-chrome)** — preciso que o Rod confirme se resolveu de vez ou se
+ainda escurece.
+
 ## Pendente
 
 Nenhum arquivo `.frm` pendente — os 11 alcançáveis (modo 1 jogador +
