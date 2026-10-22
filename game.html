@@ -46,15 +46,20 @@
     display:none;
   }
   .screen.active{display:block;}
-  /* BUG REAL CORRIGIDO (Firefox): background:transparent não remove o visual nativo de <button>
-     no Firefox (ele mantém a "aparência" de botão do SO por baixo, que escurece em hover/clique/
-     foco) — precisa de appearance:none explícito. Chrome já ignora isso por padrão, por isso só
-     aparecia no Firefox. Aplicado a TODO <button> do projeto (ans-hit, help-icon, rules-*, etc),
-     não só .hit, pra não deixar nenhum escapar. */
+  /* BUG REAL CORRIGIDO (Firefox) — 2ª tentativa, reset mais completo: appearance:none sozinho não
+     bastou. Firefox também aplica box-shadow/filter/outline próprios em :hover/:active/:focus em
+     <button> nativo, e ::-moz-focus-inner adiciona um padding+borda interna invisível que também
+     participa do escurecimento. !important pra vencer a ordem de especificidade do UA stylesheet
+     do Firefox, que é diferente do Chrome. */
   button{
-    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    appearance:none !important; -webkit-appearance:none !important; -moz-appearance:none !important;
+    background:transparent !important; border:0 !important; outline:0 !important;
+    box-shadow:none !important; filter:none !important; color:inherit;
   }
-  button:hover, button:active, button:focus{ background:transparent; }
+  button::-moz-focus-inner{ border:0 !important; padding:0 !important; outline:0 !important; }
+  button:hover, button:active, button:focus, button:focus-visible{
+    background:transparent !important; box-shadow:none !important; filter:none !important;
+  }
   .hit{
     position:absolute;
     cursor:pointer;
