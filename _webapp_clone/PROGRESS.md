@@ -244,17 +244,44 @@ arquivos reais e muitos passam disso — `Rodada1.ogg`=8.6s,
 salvaguarda virou o gatilho principal (errado) em vez de só backup.
 Corrigido pra 15000ms, com folga real sobre o maior áudio medido.
 
-## Decisão 2026-10-22 — hospedagem fica só no Artifact
+## Decisão 2026-10-23 — publicado no GitHub Pages (mudou de ideia)
 
-Rod perguntou sobre gerar um `.apk` (cancelado, ia gastar muito token) e
-depois sobre GitHub Pages. O repo `ro2342/sdm4` é **público** — publicar
-via Pages tornaria o clone acessível pra qualquer um na internet, o que
-contradiz o rodapé do próprio site ("uso pessoal e privado"). Apresentei
-as opções (deixar só no Artifact / Pages público / tornar repo privado
-primeiro) e Rod escolheu **deixar só no Artifact**. Nada a fazer aqui;
-`_webapp_clone/` continua sem commit no repo (ver nota no topo do
-arquivo). Se decidir mudar de ideia depois, essas opções continuam
-documentadas aqui.
+Rod perguntou sobre gerar um `.apk` (cancelado, ia gastar muito token),
+depois sobre "atalho no celular tipo PWA" — expliquei que o link do
+Artifact sempre carrega com o cabeçalho do claude.ai em volta (não dá
+pra tirar), e que um PWA de verdade (instalável, tela cheia, sem
+cabeçalho) precisava de hospedagem própria. Rod decidiu então ir pro
+GitHub Pages público mesmo (reverteu a decisão anterior de ficar só no
+Artifact — confirmado explicitamente, mesmo sabendo que o repo é
+público).
+
+**Site no ar:** https://ro2342.github.io/sdm4/
+
+**O que foi feito:**
+- `_webapp_clone/` finalmente commitado no branch `main` (353 arquivos,
+  primeiro commit — estava sem commit desde sempre, ver histórico acima).
+- Arquivo principal virou `game.html` (mesmo conteúdo de sempre, usado
+  pro Artifact) + novo `index.html` (documento HTML completo de verdade,
+  com `<!doctype>`/`<head>`/manifest — só um `<iframe>` tela-cheia sem
+  borda apontando pro `game.html`). Isso evita duplicar o jogo inteiro
+  em dois arquivos — só um wrapper fino.
+- `manifest.json` + `icon-192.png`/`icon-512.png` (logo recortado de
+  `SHOW4.jpg`, sobre fundo azul escuro) — PWA instalável de verdade,
+  `display:fullscreen`, `orientation:landscape` (trava no formato 4:3
+  pedido, sem precisar redesenhar nenhuma arte).
+- Testado localmente num server HTTP antes de publicar (sem cabeçalho,
+  vídeo rodando, 4:3 centralizado) e depois confirmado ao vivo igual.
+- Deploy via branch órfão `gh-pages` na raiz do repo (não mexe no
+  histórico do `main`) — GitHub Pages já estava configurado apontando
+  pra esse branch (provavelmente de alguma tentativa anterior), só
+  precisei dar push que o build rodou sozinho.
+
+**Pra instalar no celular:** abrir o link acima no Chrome (Android) ou
+Safari (iPhone) → "Adicionar à tela inicial" — agora SEM o cabeçalho do
+claude.ai, ícone customizado, abre em tela cheia.
+
+Link do Artifact (`claude.ai/code/artifact/...`) continua funcionando
+também, sem mudança — os dois ficam no ar em paralelo.
 
 ## Pendente
 
