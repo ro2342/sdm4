@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Show do Milhão 4</title>
+<meta name="description" content="Clone não-oficial do jogo de CD-ROM Show do Milhão 4 (SBT/Softmed, 1998-2001) — uso pessoal." />
+
+<!-- PWA: instalável via "Adicionar à tela inicial" (Android/Chrome lê manifest.json; iOS/Safari
+     usa as meta tags apple-* abaixo, que não seguem o manifest.json). -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0a1555" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Milhão 4" />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<style>
+  html, body { margin:0; padding:0; height:100%; width:100%; overflow:hidden; background:#0a1555; }
+  iframe { border:0; display:block; width:100vw; height:100vh; height:100dvh; }
+</style>
+</head>
+<body>
+  <!-- O jogo em si vive em game.html (mesmo arquivo usado pro Claude Artifact) — este index.html
+       só existe pra dar uma página HTML completa de verdade (doctype/head/manifest) pro GitHub
+       Pages, servindo o jogo tela-cheia sem duplicar nenhum conteúdo. -->
+  <iframe src="game.html" title="Show do Milhão 4" allow="autoplay"></iframe>
+</body>
+</html>
