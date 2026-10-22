@@ -46,6 +46,15 @@
     display:none;
   }
   .screen.active{display:block;}
+  /* BUG REAL CORRIGIDO (Firefox): background:transparent não remove o visual nativo de <button>
+     no Firefox (ele mantém a "aparência" de botão do SO por baixo, que escurece em hover/clique/
+     foco) — precisa de appearance:none explícito. Chrome já ignora isso por padrão, por isso só
+     aparecia no Firefox. Aplicado a TODO <button> do projeto (ans-hit, help-icon, rules-*, etc),
+     não só .hit, pra não deixar nenhum escapar. */
+  button{
+    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  }
+  button:hover, button:active, button:focus{ background:transparent; }
   .hit{
     position:absolute;
     cursor:pointer;
@@ -91,7 +100,10 @@
   /* ---------- GAME (fundo real TELA1JOGADOR.jpg, só overlays transparentes nas posições exatas do .frm) ---------- */
   /* coloca_ouro: o twips do .frm (Left=6330) não bate com o pixel real do fundo TELA1JOGADOR.jpg —
      medido direto na imagem (bbox do bloco ERRAR/PARAR/ACERTAR em pixel, 640x480): ~413,3 a 630,60 */
-  .ouro-pill{ position:absolute; left:64.5%; top:0.6%; width:34%; height:12%; }
+  /* Ajuste fino: tamanho real nativo de OURO1-16.jpg é 220x61px (medido direto, todos iguais) —
+     width/height agora usam a fração exata (34.375%/12.708%) em vez do arredondamento anterior
+     (34%/12%), e left/top usam o canto medido em pixel (413,3) também exato. */
+  .ouro-pill{ position:absolute; left:64.531%; top:0.625%; width:34.375%; height:12.708%; }
   .q-box{
     position:absolute;
     display:flex; align-items:center; justify-content:center;
