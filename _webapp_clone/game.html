@@ -1,0 +1,1844 @@
+<title>Show do Milhão 4</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#0a0e2a;
+    --paper:#0d1340;
+    --accent:#ffd400;
+    --accent-ink:#5a1a00;
+    --red:#c21807;
+    --blue-glow:#3b4fd8;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at 50% -10%, #1a2470 0%, #060818 70%);
+    color:#f4f4ff;
+    font-family: system-ui, "Segoe UI", sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:16px;
+  }
+  .display-font{
+    font-family: "Arial Black", "Haettenschweiler", Impact, "Segoe UI", sans-serif;
+    letter-spacing:.5px;
+  }
+  #stage-wrap{
+    width:100%;
+    max-width:960px;
+  }
+  #stage{
+    position:relative;
+    width:100%;
+    aspect-ratio: 4 / 3;
+    background:#000;
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 2px rgba(255,212,0,.25);
+  }
+  .screen{
+    position:absolute; inset:0;
+    background-size:cover; background-position:center;
+    display:none;
+  }
+  .screen.active{display:block;}
+  .hit{
+    position:absolute;
+    cursor:pointer;
+    background:transparent;
+    border:0;
+    padding:0;
+  }
+  .hit:focus-visible{ outline:3px solid #fff; outline-offset:2px; }
+
+  /* ---------- START (JOGREG.frm) ---------- */
+  .menu-fx{ position:absolute; display:none; pointer-events:none; }
+  .menu-fx.show{ display:block; }
+
+  /* Botão feito da imagem REAL do jogo (ex: btok_a.jpg) — nunca desenhado em CSS */
+  .img-btn{
+    position:absolute;
+    width:14%; aspect-ratio:1;
+    transform:translateX(-50%);
+    border:0; padding:0; background:transparent; cursor:pointer;
+  }
+  .img-btn img{ width:100%; display:block; }
+  .img-btn:disabled{ cursor:default; }
+
+  /* ---------- SUBJECT ---------- */
+  .subj-btn{ position:absolute; border-radius:10px; }
+  /* Confirmado FRMASSUN.frm: seleção não é borda CSS — troca pra imagem bt{materia}_a.jpg (com
+     glow vermelho já desenhado) por cima do bt{materia}_s.jpg (já no fundo materias.jpg) */
+  .subj-fx{ position:absolute; display:none; pointer-events:none; }
+  .subj-fx.show{ display:block; }
+
+  /* ---------- NAME ---------- */
+  /* Transparente de propósito: as 2 caixas amarelas já existem desenhadas em nomes.jpg (campo_nome
+     e campo_nome_1, separadas por um "X"), isso só posiciona o texto por cima. Posições reais do
+     NOMES.frm: campo_nome Left=1440,Top=3720,W=3120,H=420; campo_nome_1 Left=6015,mesmo
+     Top/W/H — confirmado visualmente, bate exato com as 2 caixas da imagem. */
+  #name-input{
+    position:absolute; left:15%; top:51.67%; width:32.5%; height:5.83%;
+    font-size:clamp(.7rem,2.2vw,1.1rem); text-align:center;
+    border:0; padding:0 6px; outline:none;
+    background:transparent; color:#5a1a00; font-weight:700;
+  }
+
+  /* ---------- GAME (fundo real TELA1JOGADOR.jpg, só overlays transparentes nas posições exatas do .frm) ---------- */
+  /* coloca_ouro: o twips do .frm (Left=6330) não bate com o pixel real do fundo TELA1JOGADOR.jpg —
+     medido direto na imagem (bbox do bloco ERRAR/PARAR/ACERTAR em pixel, 640x480): ~413,3 a 630,60 */
+  .ouro-pill{ position:absolute; left:64.5%; top:0.6%; width:34%; height:12%; }
+  .q-box{
+    position:absolute;
+    display:flex; align-items:center; justify-content:center;
+    padding:2% 4%;
+    text-align:center; color:#fff;
+    font-weight:700;
+    font-size:clamp(.55rem,1.6vw,.95rem);
+    line-height:1.2;
+  }
+  .ans-row{
+    position:absolute;
+    display:flex; align-items:center;
+    padding-left:14%;
+    color:#fff; font-weight:600;
+    font-size:clamp(.5rem,1.4vw,.82rem);
+    pointer-events:none;
+  }
+  .ans-hit{ border-radius:6px; }
+  .ans-hit.dimmed{ opacity:.3; }
+  .ans-row.dimmed{ opacity:.3; }
+  /* resposta[i].ForeColor=&HFF (vermelho) ao escolher, confirmado TELAJOGO1.js:241 */
+  .ans-row.picked{ color:#ff0000; }
+  /* BTSIM_S.jpg/BTNAO_S.jpg cobrindo os diamantes Ajuda/Parar quando há confirmação pendente */
+  #help-trigger-img, #btn-parar-img{ width:100%; height:100%; display:none; }
+  #help-trigger-img.show, #btn-parar-img.show{ display:block; }
+  /* Image2 (faixa de revelação da resposta certa, pisca via FAIXA1-4.jpg) — posições reais do
+     .frm (pixel, ScaleMode=3, convertidas) por índice de resposta certa 0..3 */
+  /* Sem width/height fixo de propósito: faixa1-4.jpg têm tamanho NATIVO levemente diferente
+     entre si (306x47, 308x45, 312x44, 299x44px) — controle Image sem Stretch, mesmo padrão do
+     resto do jogo. Width/height reais (um por imagem) são setados em JS em piscaFaixa(), senão
+     uma caixa CSS fixa estica/espreme cada imagem de um jeito diferente (bug real corrigido). */
+  .faixa-img{ position:absolute; display:none; z-index:5; }
+
+  /* Image8 (relógio): o twips do .frm (Left=9030→79.21%) não bate com o pixel real do fundo
+     TELA1JOGADOR.jpg — medido direto na imagem (borda ciano da barra, 640x480): 92.34%,20.83%,7.5%,70.42% */
+  .timer-clock{ position:absolute; left:92.34%; top:20.83%; width:7.5%; height:70.42%; object-fit:fill; }
+  /* Label5 (contador numérico): abaixo da barra, centralizado na mesma largura */
+  .timer-secs{
+    position:absolute; left:92.34%; top:91.5%; width:7.5%; height:4%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:clamp(.55rem,1.5vw,.85rem); color:#ffd400; text-shadow:0 0 4px #000;
+  }
+
+  /* Painel único de ajuda — CARTAS/PLACAS/CONVIDADOS/menu de seleção abrem TODOS na mesma posição
+     (TELAJOGO1.frm: Left=311,Top=137 — setado via CÓDIGO, então é PIXEL (Form.ScaleMode=3), não
+     twips. Convertido: 311px*15=4665 twips / 11400 = 40.9%; 137px*15=2055 / 7200 = 28.5%.
+     W=4305,H=4200 são do bloco Begin (sempre twips) = 37.76%,58.33%) */
+  .help-panel{
+    position:absolute; left:48.59%; top:28.5%; width:44.84%; height:58.33%;
+    z-index:8; display:none;
+  }
+  .help-panel.show{ display:block; }
+  .help-panel > div{ position:absolute; inset:0; display:none; background-size:100% 100%; }
+  .help-panel > div.show{ display:block; }
+  .help-icon{ position:absolute; border:0; background:transparent; padding:0; cursor:pointer; }
+  .help-icon img{ width:100%; height:100%; display:block; }
+  .help-icon:disabled{ cursor:default; }
+  .help-hit{ position:absolute; border:0; background:transparent; cursor:pointer; }
+  .help-pct{
+    position:absolute; width:10%; height:8%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; color:#fff200; font-size:clamp(.65rem,1.8vw,1.1rem);
+    text-shadow:-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 6px #000;
+  }
+
+  /* ---------- GAME 2 JOGADORES (TELAJOGO.frm) ---------- */
+  /* coloca_ouro aqui: Left=42px(P1)/357px(P2), Top=34px (code-set, ScaleMode=3 pixel, base 640x480
+     confirmada igual TELAJOGO1/QTGANHOU — NÃO usar o ClientWidth declarado de 11340 (756px, mesma
+     classe de bug já encontrada 2x nesta sessão). Posição/lado trocados via JS (applySide2P). */
+  .ouro-pill2{ position:absolute; top:7.083%; width:5.3125%; height:6.875%; }
+  .timer-clock2{ position:absolute; left:47.66%; top:32.5%; width:5.156%; height:64.17%; object-fit:fill; }
+  .timer-secs2{
+    position:absolute; left:47.66%; top:96.67%; width:5.156%; height:2.917%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:clamp(.5rem,1.3vw,.78rem); color:#ffd400; text-shadow:0 0 4px #000;
+  }
+  /* NOMEE/NOMED: cor verde=vez atual / marrom=aguardando, trocada via JS (applySide2P) */
+  .nome2{
+    position:absolute; top:2.92%; height:4.17%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:clamp(.5rem,1.3vw,.8rem); text-shadow:0 1px 2px #000;
+  }
+  .nome2-e{ left:0.47%; width:28.28%; }
+  .nome2-d{ left:71.09%; width:28.28%; }
+  /* escolha(0)/(1) SIM/NAO e escolha(2)/(3) PARAR/AJUDA: todos 73x73px declarados (11.406%x15.208%
+     de 640x480) — ao contrário do TELAJOGO1, aqui os 4 estados usam o MESMO tamanho (confirmado
+     medindo os .jpg reais de Jpgse/Jpgsd: todos exatamente 73x73px). Posição trocada via JS. */
+  #help-trigger2, #btn-parar2{ position:absolute; width:11.406%; height:15.208%; border:0; background:transparent; padding:0; }
+  #help-trigger2 img, #btn-parar2 img{ width:100%; height:100%; display:none; }
+  #help-trigger2 img.show, #btn-parar2 img.show{ display:block; }
+  .help-panel2{
+    position:absolute; left:0.3125%; top:69.375%; width:43.59%; height:30.42%;
+    z-index:8; display:none;
+  }
+  .help-panel2.show{ display:block; }
+  .help-panel2 > div{ position:absolute; inset:0; display:none; background-size:100% 100%; }
+  .help-panel2 > div.show{ display:block; }
+
+  /* Diálogo genérico Sim/Não (zerar placar) — BUG REAL CORRIGIDO: essa regra tinha sido apagada
+     junto quando troquei o CSS do painel de ajuda, deixando o diálogo sempre visível por cima de
+     TODAS as telas (div sem display:none cai no default do navegador, que é display:block). */
+  .confirm-overlay{
+    position:absolute; inset:0; z-index:20;
+    background:rgba(4,6,24,.82);
+    display:none;
+    align-items:center; justify-content:center;
+  }
+  .confirm-overlay.show{ display:flex; }
+
+  .btn-parar{
+    background:linear-gradient(160deg,#ffe067,#d98f00);
+    border:0; border-radius:8px; color:#5a1a00; font-weight:800;
+    padding:0 5%; height:80%;
+    font-size:clamp(.55rem,1.5vw,.95rem);
+    cursor:pointer;
+  }
+
+  /* ---------- INTRO / VIDEOS ---------- */
+  /* APRESENT.frm: BackColor=&HE0E0E0 (cinza claro), SEM Picture de fundo. O controle MCIWnd
+     (ANIMACAO) é conhecido por se redimensionar sozinho pro tamanho NATIVO do vídeo ao abrir o
+     arquivo, ignorando o Width/Height declarado no .frm (confirmado pelo usuário por memória
+     direta de ter jogado: vídeo em tamanho original, centralizado, não uma caixinha pequena).
+     Vídeo real 320x240 centralizado no canvas 640x480 = 50%,50%, left/top 25%. */
+  #screen-intro{ background:#e0e0e0; }
+  #screen-intro .mci-box{
+    position:absolute; left:25%; top:25%; width:50%; height:50%;
+    background:#000; cursor:pointer;
+  }
+  #screen-intro video{ width:100%; height:100%; object-fit:contain; display:block; }
+  .skip-btn{
+    position:absolute; right:4%; bottom:5%;
+    background:rgba(0,0,0,.55); color:#fff; border:1px solid rgba(255,255,255,.4);
+    border-radius:999px; padding:.5em 1.2em; font-weight:700; cursor:pointer;
+    font-size:clamp(.6rem,1.6vw,.85rem);
+  }
+  .result-video{
+    position:absolute; left:50%; top:4%; width:46%; transform:translateX(-50%);
+    border-radius:8px; border:2px solid rgba(255,212,0,.6);
+    box-shadow:0 10px 24px rgba(0,0,0,.5);
+  }
+
+  .text-btn{
+    background:#ffd400; color:#5a1a00; border:0; border-radius:999px;
+    padding:.6em 1.4em; font-weight:800; cursor:pointer;
+    font-size:clamp(.65rem,1.8vw,.95rem);
+  }
+  .text-btn.ghost{ background:transparent; color:#ffd400; border:2px solid #ffd400; }
+
+  /* Confirmado PLACARG.frm (Label1-20, 10 pares nome/pontuação): coluna nome Left=3180twips/15/640
+     =33.125% (ForeColor &HFF0000=vermelho), coluna pontos Left~5580-5595/15/640=58.2%
+     (ForeColor &H800080=roxo). 10 linhas, Tops reais convertidos abaixo. */
+  .board-name, .board-score{
+    position:absolute; font-weight:700; font-size:clamp(.5rem,1.4vw,.78rem);
+  }
+  .board-name{ left:33.125%; width:24%; color:#ff0000; text-align:left; }
+  /* Ajuste fino confirmado pelo usuário: a borda direita da caixa (left+width=70.2%) passava um
+     pouco da barra amarela real de PLACARG.jpg (medida em pixel: termina em ~69.5%). Reduzido. */
+  .board-score{ left:58.2%; width:10.5%; color:#800080; text-align:right; }
+
+  .mute-toggle{
+    position:absolute; left:3%; top:3%;
+    width:9%; aspect-ratio:1;
+    border-radius:50%;
+    background:rgba(0,0,0,.45); border:1px solid rgba(255,212,0,.5);
+    color:#ffd400; font-size:1.1rem;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:5;
+  }
+
+  footer{
+    text-align:center; color:#6670b8; font-size:.72rem; margin-top:10px;
+  }
+  footer a{ color:#9aa3e8; }
+</style>
+
+<div id="stage-wrap">
+  <div id="stage">
+
+    <button class="mute-toggle" id="btn-mute" aria-label="Som">🔊</button>
+
+    <!-- INTRO VIDEO -->
+    <!-- Confirmado APRESENT.frm: SEM botão "pular" — Form_MouseDown('537EE4) fecha o vídeo e
+         navega pra JOGREG com um clique em QUALQUER lugar do form, e Timer1_Timer('53B1D8) faz
+         o mesmo automaticamente aos 22s (duração real do abertura.avi: 21.99s) -->
+    <section class="screen active" id="screen-intro">
+      <div class="mci-box" id="intro-mci-box">
+        <video id="intro-video" src="assets/video/abertura.mp4" autoplay playsinline></video>
+      </div>
+    </section>
+
+    <!-- START (JOGREG.frm) — fundo real JOGREG.jpg (REGRAS/SAIR empilhados à esquerda, JOGAR
+         sozinho à direita). Hotspots nos círculos azuis, posições exatas do .frm (twips/15=px de
+         640x480, confirmado batendo com a arte real). FX*_A.jpg piscam no clique (Image control
+         sem Stretch = redimensiona pro tamanho nativo da imagem, não o box declarado no .frm). -->
+    <section class="screen" id="screen-start" style="background-image:url('assets/img/JOGREG.jpg');background-size:cover;background-position:center;">
+      <button class="hit" id="btn-regras" style="left:34.4%; top:65%; width:7.5%; height:10.2%;" aria-label="Regras"></button>
+      <button class="hit" id="btn-jogar" style="left:67.3%; top:76.5%; width:7.7%; height:10.2%;" aria-label="Jogar"></button>
+      <button class="hit" id="btn-sair-menu" style="left:35%; top:87.7%; width:7.2%; height:9.6%;" aria-label="Sair"></button>
+      <img class="menu-fx" id="fx-regras" src="assets/img/regras_a.jpg" style="left:7.8%; top:62.08%; width:38.1%;" />
+      <img class="menu-fx" id="fx-jogar" src="assets/img/JOGAR_A.jpg" style="left:66.25%; top:76.04%; width:8.75%;" />
+      <img class="menu-fx" id="fx-sair" src="assets/img/sair_a.jpg" style="left:9.06%; top:86.67%; width:36.7%;" />
+    </section>
+
+    <!-- REGRAS (TELREGRAS.frm) — 5 páginas (índice 0..4). Os 3 botões (Anterior/Sair/Próximo)
+         ficam AGRUPADOS no canto inferior direito (não espalhados na base inteira), posições
+         exatas do .frm (twips/15=px de 640x480). Sem estado "desabilitado": idle é sempre
+         APAGADO, clique pisca ACESO por 300ms — mesmo nos limites de página (0 e 4), onde só
+         não avança mas ainda pisca (confirmado: Form_Activate deixa os 3 sempre Enabled=True). -->
+    <section class="screen" id="screen-rules">
+      <img id="rules-img" src="assets/img/REGRA_0.jpg" style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain;" alt="Regras" />
+      <button class="hit" id="rules-prev" style="left:64.06%; top:85.42%; width:11.875%; height:14.375%;" aria-label="Anterior"><img id="rules-prev-img" src="assets/img/BOTAO_REGRAS_ANTERIOR_APAGADO.jpg" style="width:100%;height:100%;" alt="" /></button>
+      <button class="hit" id="rules-sair" style="left:77.81%; top:85.625%; width:8.125%; height:14.375%;" aria-label="Sair"><img id="rules-sair-img" src="assets/img/BOTAO_REGRAS_SAIR_APAGADO.jpg" style="width:100%;height:100%;" alt="" /></button>
+      <button class="hit" id="rules-next" style="left:87.34%; top:83.125%; width:11.875%; height:16.667%;" aria-label="Próximo"><img id="rules-next-img" src="assets/img/BOTAO_REGRAS_PROXIMO_APAGADO.jpg" style="width:100%;height:100%;" alt="" /></button>
+    </section>
+
+    <!-- SUBJECT (FRMASSUN.frm) — posições exatas (twips/15=px de 640x480). Cada matéria é um PAR
+         de imagens: bt{nome}_s.jpg (normal, já no fundo materias.jpg) e bt{nome}_a.jpg (selecionada,
+         com glow vermelho, mostrada por cima ao clicar — não é borda CSS). Botão final usa
+         btok_s.jpg/btok_a.jpg (Image3), não btjogar — confirmado Image3_Click carrega BTOK_A.jpg. -->
+    <section class="screen" id="screen-subject" style="background-image:url('assets/img/materias.jpg');background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;">
+      <button class="hit subj-btn" style="left:25.94%; top:27.29%; width:25.16%; height:20%;" data-mat="H"></button>
+      <button class="hit subj-btn" style="left:55.94%; top:27.5%; width:23.75%; height:19.79%;" data-mat="C"></button>
+      <button class="hit subj-btn" style="left:12.03%; top:46.46%; width:24.22%; height:22.92%;" data-mat="I"></button>
+      <button class="hit subj-btn" style="left:42.03%; top:48.33%; width:23.13%; height:19.58%;" data-mat="M"></button>
+      <button class="hit subj-btn" style="left:71.41%; top:48.13%; width:22.66%; height:20%;" data-mat="P"></button>
+      <button class="hit subj-btn" style="left:26.56%; top:68.96%; width:24.22%; height:21.25%;" data-mat="V"></button>
+      <button class="hit subj-btn" style="left:55.78%; top:68.96%; width:23.59%; height:20%;" data-mat="G"></button>
+      <img class="subj-fx" id="subj-fx-H" src="assets/img/bthist_a.jpg" style="left:25.94%; top:27.29%; width:25.16%; height:20%;" />
+      <img class="subj-fx" id="subj-fx-C" src="assets/img/btciencias_a.jpg" style="left:55.94%; top:27.5%; width:23.75%; height:19.79%;" />
+      <img class="subj-fx" id="subj-fx-I" src="assets/img/btingles_a.jpg" style="left:12.03%; top:46.46%; width:24.22%; height:22.92%;" />
+      <img class="subj-fx" id="subj-fx-M" src="assets/img/btmat_a.jpg" style="left:42.03%; top:48.33%; width:23.13%; height:19.58%;" />
+      <img class="subj-fx" id="subj-fx-P" src="assets/img/btport_a.jpg" style="left:71.41%; top:48.13%; width:22.66%; height:20%;" />
+      <img class="subj-fx" id="subj-fx-V" src="assets/img/btvar_a.jpg" style="left:26.56%; top:68.96%; width:24.22%; height:21.25%;" />
+      <img class="subj-fx" id="subj-fx-G" src="assets/img/btgeo_a.jpg" style="left:55.78%; top:68.96%; width:23.59%; height:20%;" />
+      <button class="img-btn" id="btn-subject-confirm" style="left:88.75%; top:87.5%; width:11.09%; height:12.5%; aspect-ratio:auto; transform:none; visibility:hidden;" disabled><img id="btn-subject-confirm-img" src="assets/img/btok_s.jpg" alt="Jogar" /></button>
+    </section>
+
+    <!-- NAME -->
+    <section class="screen" id="screen-name" style="background-image:url('assets/img/nomes.jpg');background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;">
+      <input id="name-input" maxlength="18" placeholder="SEU NOME" autocomplete="off" />
+      <button class="hit" style="left:29.9%; top:83.5%; width:13.2%; height:15.2%;" data-go="start" aria-label="Voltar"></button>
+      <button class="hit" style="left:63.9%; top:83.1%; width:12.4%; height:15.2%;" id="btn-start-game" aria-label="Jogar"></button>
+    </section>
+
+    <!-- VALENDO (transição antes de cada pergunta) -->
+    <section class="screen" id="screen-valendo" style="background-image:url('assets/img/VALENDO.jpg');background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;">
+      <div id="valendo-name" style="position:absolute; left:1.1%; top:15.8%; width:46.2%; height:7.5%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-family:'Comic Sans MS',cursive; font-size:clamp(.75rem,2.2vw,1.2rem); text-shadow:0 2px 4px #000;"></div>
+      <!-- Confirmado: Image control sem Stretch redimensiona pro tamanho NATIVO da figura (410x216px
+           de 640x480), não pro box declarado no .frm (3030x1950 twips) — mesmo padrão visto em
+           JOGREG/NOMES. Arquivo real é "{valor}.jpg" (ex: 1000.jpg), não "bar{valor}.jpg" (isso eu
+           tinha inventado — confirmei que não existe no projeto original, nem no histórico do git). -->
+      <img id="valendo-img" src="" alt="valor" style="position:absolute; left:22.03%; top:39.17%; width:64.06%; height:45%;" />
+      <!-- Confirmado VALENDO.frm (Image0-6, extraídas direto do .frx): cascata de brilho/sparkle
+           que pisca na posição fixa 515,129px (ScaleMode=3=pixel) de 640x480 = 80.47%,26.875%,
+           largura/altura 1380x1620 twips/15 = 14.375%,22.5% — não são cartas, é um efeito de brilho -->
+      <img id="valendo-sparkle" src="" alt="" style="position:absolute; left:80.47%; top:26.875%; width:14.375%; height:22.5%; display:none;" />
+    </section>
+
+    <!-- GAME (posições exatas tiradas do TELAJOGO1.frm pago: pergunta/resposta/escolha/Label5, fundo real TELA1JOGADOR.jpg) -->
+    <section class="screen" id="screen-game" style="background-image:url('assets/img/TELA1JOGADOR.jpg');background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;">
+      <!-- coloca_ouro: imagem única com ERRAR/PARAR/ACERTAR já desenhados (Pastilhas/OURO1-16.jpg), trocada por degrau -->
+      <img class="ouro-pill" id="ouro-img" src="" alt="" />
+
+      <div class="q-box" id="q-text" style="left:0.78%; top:22.9%; width:53.13%; height:13.5%;">Carregando pergunta…</div>
+      <div class="ans-row" id="ans-0" style="left:11.25%; top:42.3%; width:38.91%; height:5.2%;"></div>
+      <div class="ans-row" id="ans-1" style="left:11.25%; top:51.7%; width:38.91%; height:5.2%;"></div>
+      <div class="ans-row" id="ans-2" style="left:11.25%; top:60.6%; width:38.91%; height:5.2%;"></div>
+      <div class="ans-row" id="ans-3" style="left:11.25%; top:70.0%; width:38.91%; height:5.2%;"></div>
+      <button class="hit ans-hit" data-i="0" style="left:11.25%; top:42.3%; width:38.91%; height:5.2%;"></button>
+      <button class="hit ans-hit" data-i="1" style="left:11.25%; top:51.7%; width:38.91%; height:5.2%;"></button>
+      <button class="hit ans-hit" data-i="2" style="left:11.25%; top:60.6%; width:38.91%; height:5.2%;"></button>
+      <button class="hit ans-hit" data-i="3" style="left:11.25%; top:70.0%; width:38.91%; height:5.2%;"></button>
+      <img class="faixa-img" id="faixa-img" src="" alt="" />
+      <!-- Removido: banner de texto "CORRETO!"/"ERROU!" inventado — não existe NENHUM Label no
+           Begin block do TELAJOGO1.frm com esse conteúdo. A revelação real é só a faixa piscando
+           (Image2) + o som correta.wav/errada.wav, sem texto nenhum sobreposto. -->
+
+      <!-- Image8 (relógio por troca de frame RELOGIO_N.jpg) + Label5 (contador numérico), TELAJOGO1.frm -->
+      <img class="timer-clock" id="timer-clock" src="assets/img/relogio_0.jpg" alt="" />
+      <div class="timer-secs" id="timer-secs">41</div>
+
+      <!-- Confirmado TELAJOGO1.js escolha_Click/resposta_Click: esses 2 diamantes (Ajuda/Parar, já
+           desenhados no fundo) trocam de imagem pra SIM/NÃO (BTSIM_S.jpg/BTNAO_S.jpg) sempre que
+           há uma confirmação pendente (resposta escolhida OU pediu pra parar) — não é um popup novo. -->
+      <button class="hit" id="help-trigger" style="left:16.41%; top:81.04%; width:6.56%; height:10%;" aria-label="Ajuda"><img id="help-trigger-img" src="" alt="" /></button>
+      <button class="hit" id="btn-parar" style="left:30.94%; top:81.67%; width:6.72%; height:9.38%;" aria-label="Parar"><img id="btn-parar-img" src="" alt="" /></button>
+
+      <!-- Painel de ajuda — confirmado TELAJOGO1.frm: Picture1 (menu/array AJUDA), CARTAS, PLACAS,
+           CONVIDADOS abrem todos no MESMO retângulo (Left=311,Top=137,W=4305,H=4200). Posições dos
+           ícones/percentuais são relativas a esse retângulo (não à tela inteira). -->
+      <div class="help-panel" id="help-panel">
+        <!-- tapa_ajuda.jpg: fundo redondo do menu de seleção (confirmado visualmente — já tem os
+             6 ícones desenhados nele, Cartas/Placas/Convidados/3x Pula/Ajuda no centro). Faltava
+             por completo antes (painel ficava sem fundo nenhum, só os botões flutuando). -->
+        <div class="show" id="help-select" style="background-image:url('assets/img/tapa_ajuda.jpg');">
+          <button class="help-icon" data-help="0" style="left:39.0%; top:9.6%; width:28.6%; height:22.1%;"><img id="icon-0" src="assets/img/AJUDA0.jpg" alt="Cartas" /></button>
+          <button class="help-icon" data-help="1" style="left:12.9%; top:25.4%; width:27.5%; height:21.4%;"><img id="icon-1" src="assets/img/AJUDA1.jpg" alt="Placas" /></button>
+          <button class="help-icon" data-help="2" style="left:64.1%; top:26.8%; width:27.5%; height:20.4%;"><img id="icon-2" src="assets/img/AJUDA2.jpg" alt="Convidados" /></button>
+          <button class="help-icon" data-help="3" style="left:5.6%; top:46.8%; width:36.9%; height:28.9%;"><img id="icon-3" src="assets/img/AJUDA3.jpg" alt="Pular" /></button>
+          <button class="help-icon" data-help="4" style="left:38.7%; top:63.9%; width:27.9%; height:22.9%;"><img id="icon-4" src="assets/img/AJUDA4.jpg" alt="Pular" /></button>
+          <button class="help-icon" data-help="5" style="left:63.8%; top:50.4%; width:30.3%; height:22.5%;"><img id="icon-5" src="assets/img/AJUDA5.jpg" alt="Pular" /></button>
+        </div>
+        <!-- CORRIGIDO DE VOLTA: tapa_ajuda/tapa_cartas/tapa_placas/tapa_convidados.jpg SÃO os
+             fundos certos (confirmado visualmente — tapa_cartas.jpg mostra o leque de 4 cartas no
+             círculo, tapa_placas.jpg mostra as placas "1 2 3 4" no círculo, batendo exatamente com
+             os controles percentual_placa/percentual_conv). Esses fundos vêm do Picture embutido
+             no .frx de cada PictureBox (CARTAS/PLACAS/CONVIDADOS/Picture1), setado em tempo de
+             DESIGN — por isso nunca aparecem como string "tapa_X.jpg" em nenhum LoadPicture do
+             código decompilado (só existem no binário .frx, que não li byte a byte). O grep anterior
+             só provava ausência de uma chamada em RUNTIME, não ausência de uso real. -->
+        <div id="help-cartas-panel" style="background-image:url('assets/img/tapa_cartas.jpg');">
+          <img id="carta-img" src="" alt="" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:none; max-width:55%; max-height:60%; z-index:2;" />
+          <button class="help-hit" id="carta-clique" style="left:13.9%; top:14.3%; width:77.3%; height:73.2%;"></button>
+        </div>
+        <div id="help-placas-panel" style="background-image:url('assets/img/tapa_placas.jpg');">
+          <div class="help-pct" id="placa-pct-0" style="left:16.7%; top:42.9%;"></div>
+          <div class="help-pct" id="placa-pct-1" style="left:36.2%; top:31.4%;"></div>
+          <div class="help-pct" id="placa-pct-2" style="left:53.9%; top:44.3%;"></div>
+          <div class="help-pct" id="placa-pct-3" style="left:75.3%; top:31.4%;"></div>
+        </div>
+        <div id="help-convidados-panel" style="background-image:url('assets/img/tapa_convidados.jpg');">
+          <div class="help-pct" id="conv-pct-0" style="left:74.3%; top:40.4%;"></div>
+          <div class="help-pct" id="conv-pct-1" style="left:46.0%; top:31.9%;"></div>
+          <div class="help-pct" id="conv-pct-2" style="left:23.7%; top:40.4%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GAME 2 JOGADORES (TELAJOGO.frm) — fundo LADOE.jpg/LADOD.jpg (tela dividida, lado ativo mais
+         claro). Confirmado: pergunta/coloca_ouro/painel de ajuda se repositionam esquerda/direita
+         conforme de quem é a vez (MemVar_5501A8); resposta/faixa de revelação NÃO se reposicionam
+         no código original (ficam sempre no slot esquerdo, mesmo no turno do jogador 2) — fiel ao
+         original mesmo assim, por pedido explícito do usuário (não "consertar" esse detalhe). -->
+    <section class="screen" id="screen-game2">
+      <img class="ouro-pill2" id="ouro-img2" src="" alt="" />
+      <div class="q-box" id="q-text2" style="width:43.91%; height:13.54%;">Carregando pergunta…</div>
+      <div class="ans-row" id="ans2-0" style="left:7.5%; top:37.92%; width:35%; height:5%;"></div>
+      <div class="ans-row" id="ans2-1" style="left:7.5%; top:46.67%; width:35%; height:5%;"></div>
+      <div class="ans-row" id="ans2-2" style="left:7.5%; top:55%; width:35%; height:5%;"></div>
+      <div class="ans-row" id="ans2-3" style="left:7.5%; top:63.75%; width:35%; height:5%;"></div>
+      <button class="hit ans-hit2" data-i="0" style="left:7.5%; top:37.92%; width:35%; height:5%;"></button>
+      <button class="hit ans-hit2" data-i="1" style="left:7.5%; top:46.67%; width:35%; height:5%;"></button>
+      <button class="hit ans-hit2" data-i="2" style="left:7.5%; top:55%; width:35%; height:5%;"></button>
+      <button class="hit ans-hit2" data-i="3" style="left:7.5%; top:63.75%; width:35%; height:5%;"></button>
+      <img class="faixa-img" id="faixa-img2" src="" alt="" />
+
+      <img class="timer-clock2" id="timer-clock2" src="" alt="" />
+      <div class="timer-secs2" id="timer-secs2">41</div>
+
+      <div class="nome2 nome2-e" id="nome2-e"></div>
+      <div class="nome2 nome2-d" id="nome2-d"></div>
+
+      <button class="hit" id="help-trigger2"><img id="help-trigger2-img" src="" alt="" /></button>
+      <button class="hit" id="btn-parar2"><img id="btn-parar2-img" src="" alt="" /></button>
+
+      <div class="help-panel2" id="help-panel2">
+        <div class="show" id="help-select2">
+          <button class="help-icon help-icon2" data-help="0" style="left:37.99%; top:2.05%; width:26.17%; height:36.99%;"><img id="icon2-0" src="" alt="Cartas" /></button>
+          <button class="help-icon help-icon2" data-help="1" style="left:15.77%; top:12.33%; width:24.73%; height:34.25%;"><img id="icon2-1" src="" alt="Placas" /></button>
+          <button class="help-icon help-icon2" data-help="2" style="left:62.72%; top:8.90%; width:25.45%; height:34.93%;"><img id="icon2-2" src="" alt="Convidados" /></button>
+          <button class="help-icon help-icon2" data-help="3" style="left:16.13%; top:50%; width:24.73%; height:36.30%;"><img id="icon2-3" src="" alt="Pular" /></button>
+          <button class="help-icon help-icon2" data-help="4" style="left:40.14%; top:65.75%; width:22.58%; height:32.88%;"><img id="icon2-4" src="" alt="Pular" /></button>
+          <button class="help-icon help-icon2" data-help="5" style="left:63.80%; top:51.37%; width:24.01%; height:34.25%;"><img id="icon2-5" src="" alt="Pular" /></button>
+        </div>
+        <div id="help-cartas-panel2">
+          <img id="carta-img2" src="" alt="" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:none; max-width:55%; max-height:60%; z-index:2;" />
+          <button class="help-hit" id="carta-clique2" style="left:16.49%; top:10.27%; width:67.02%; height:82.88%;"></button>
+        </div>
+        <div id="help-placas-panel2">
+          <div class="help-pct" id="placa2-pct-0" style="left:7.86%; top:14.78%;"></div>
+          <div class="help-pct" id="placa2-pct-1" style="left:32.14%; top:24.35%;"></div>
+          <div class="help-pct" id="placa2-pct-2" style="left:56.07%; top:15.65%;"></div>
+          <div class="help-pct" id="placa2-pct-3" style="left:80.71%; top:25.22%;"></div>
+        </div>
+        <div id="help-convidados-panel2">
+          <div class="help-pct" id="conv2-pct-0" style="left:24.37%; top:33.56%;"></div>
+          <div class="help-pct" id="conv2-pct-1" style="left:46.95%; top:15.75%;"></div>
+          <div class="help-pct" id="conv2-pct-2" style="left:75.63%; top:33.56%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULT — fiel ao QTGANHOU.frm. Fundo = QTGANHOU.jpg (banner "VOCÊ GANHOU" já embutido na imagem,
+         usado em TODOS os casos inclusive derrota, conforme Form_Activate:217). Image1 = único controle
+         de conteúdo: Left=2100,Top=1545,W=5670,H=5235 (twips). BUG REAL CORRIGIDO: o .frm declara
+         ClientWidth=8355 (557px), mas o fundo real QTGANHOU.jpg medido é 640px — mesma classe de bug
+         já encontrada no TELAJOGO1.frm (base de largura errada). Convertido certo com /640 (não /8355):
+         21.875%,21.46%,59.06%,72.71% (Y não muda, 7200twips/15/480=sempre bate). Sem nome de jogador,
+         sem texto "ganhou/perdeu" inventado, sem botões — o form real não tem nenhum controle de texto
+         nem botão; é 100% automático até o vídeo encerra.avi. -->
+    <section class="screen" id="screen-result" style="background-image:url('assets/img/QTGANHOU.jpg'); background-size:cover; background-position:center; background-repeat:no-repeat;">
+      <img id="result-img" src="" alt="" style="position:absolute; left:21.875%; top:21.46%; width:59.06%; height:72.71%; object-fit:contain;" />
+      <video class="result-video" id="result-video" src="assets/video/encerra.mp4" playsinline style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; display:none;"></video>
+    </section>
+
+    <!-- SAIR (FRMFIM.frm) — confirmado: SEM botão nenhum (eu tinha inventado um "Voltar"). Toca
+         tchau.wav e volta sozinho pro menu depois de ~12 "ticks" (End no original fecha o app;
+         aqui mapeado pra voltar ao menu, já que não dá pra fechar a aba via JS). -->
+    <section class="screen" id="screen-sair" style="background-image:url('assets/img/FIM.jpg');background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;"></section>
+
+    <!-- BOARD (PLACARG.frm) — 10 linhas fixas (Label1-20), posição dos botões Zerar/Jogar medida
+         direto na imagem de fundo (bolinhas verdes, confirma com o .frm dentro de poucos %). -->
+    <!-- BUG REAL CORRIGIDO: os 10 tops abaixo estavam sistematicamente deslocados pra cima
+         (erro crescente, de ~1.6pp na linha 1 até ~2.4pp na linha 10) — confirmado comparando
+         com a posição real das 10 barras amarelas em PLACARG.jpg (escaneamento de pixel: barra 1
+         começa em y=109px, barra 10 em y=438px de 480), que bate quase exato com Label1-20.Top/15/480,
+         não com os valores antigos. Recalculado direto dos Tops declarados (Label1,3,5,...,19). -->
+    <section class="screen" id="screen-board" style="background-image:url('assets/img/PLACARG.jpg');background-size:cover !important;background-repeat:no-repeat !important;background-position:center !important;">
+      <div class="board-name" id="board-name-0" style="top:23.13%;"></div><div class="board-score" id="board-score-0" style="top:23.13%;"></div>
+      <div class="board-name" id="board-name-1" style="top:31.04%;"></div><div class="board-score" id="board-score-1" style="top:31.04%;"></div>
+      <div class="board-name" id="board-name-2" style="top:38.33%;"></div><div class="board-score" id="board-score-2" style="top:38.33%;"></div>
+      <div class="board-name" id="board-name-3" style="top:46.25%;"></div><div class="board-score" id="board-score-3" style="top:46.25%;"></div>
+      <div class="board-name" id="board-name-4" style="top:53.54%;"></div><div class="board-score" id="board-score-4" style="top:53.54%;"></div>
+      <div class="board-name" id="board-name-5" style="top:61.46%;"></div><div class="board-score" id="board-score-5" style="top:61.46%;"></div>
+      <div class="board-name" id="board-name-6" style="top:69.17%;"></div><div class="board-score" id="board-score-6" style="top:69.17%;"></div>
+      <div class="board-name" id="board-name-7" style="top:76.88%;"></div><div class="board-score" id="board-score-7" style="top:76.88%;"></div>
+      <div class="board-name" id="board-name-8" style="top:84.38%;"></div><div class="board-score" id="board-score-8" style="top:84.38%;"></div>
+      <div class="board-name" id="board-name-9" style="top:91.88%;"></div><div class="board-score" id="board-score-9" style="top:91.88%;"></div>
+      <button class="hit" style="left:84%; top:61%; width:9%; height:10%;" id="btn-zerar-placar" aria-label="Zerar placar"></button>
+      <button class="hit" style="left:83.5%; top:82%; width:9%; height:10%;" data-go="start" aria-label="Jogar"></button>
+    </section>
+
+    <!-- Confirmação genérica Sim/Não (confirmado no PLACARG.frm: zerar placar pede confirmação) -->
+    <div class="confirm-overlay" id="confirm-overlay">
+      <div style="background:#141a5c; border:2px solid #ffd400; border-radius:10px; padding:5% 7%; text-align:center; max-width:80%;">
+        <div id="confirm-text" style="color:#fff; font-weight:700; margin-bottom:6%; font-size:clamp(.7rem,2vw,1rem);"></div>
+        <div style="display:flex; gap:6%; justify-content:center;">
+          <button class="text-btn" id="confirm-yes">Sim</button>
+          <button class="text-btn ghost" id="confirm-no">Não</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <footer>Clone não-oficial feito com os dados/assets do CD-ROM original "Show do Milhão 4" (SBT) · uso pessoal e privado</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Prize ladder ----------
+  // Os 16 valores abaixo são os ÚNICOS que têm imagem (pXXXX.jpg) E áudio falado (XXXX.wav)
+  // nos assets originais — outros valores (500,1500,2500,15000,25000,150000) têm imagem mas
+  // nenhum áudio, ou seja, não fazem parte da escada ativa. Ladder confirmada por evidência de arquivo.
+  var LADDER = [1000,2000,3000,4000,5000,10000,20000,30000,40000,50000,100000,200000,300000,400000,500000,1000000];
+  // Confirmado pelo usuário: 3 "rodadas" de 5 perguntas (1k-5k / 10k-50k / 100k-500k) + a pergunta do milhão isolada.
+  // TIPO D do banco só tem 252 perguntas — bate exatamente com "reservado pra pergunta do milhão".
+  var TIERS = { A:[0,4], B:[5,9], C:[10,14], D:[15,15] }; // índices inclusivos na LADDER
+
+  function fmt(n){
+    return "R$" + n.toLocaleString("pt-BR");
+  }
+
+  // ---------- Audio ----------
+  var muted = false;
+  var sounds = {};
+  function loadSound(name, file){ var a = new Audio("assets/audio/" + file); a.preload="auto"; sounds[name]=a; }
+  loadSound("tema","Tema.ogg");
+  loadSound("tema2","Tema_2.ogg"); // confirmado QTGANHOU.frm:220 — toca ao entrar na tela de resultado
+  loadSound("susp1","Susp1.ogg");
+  loadSound("susp2","Susp2.ogg");
+  loadSound("susp3","Susp3.ogg");
+  loadSound("susp4","Susp4.ogg");
+  loadSound("susp5","Susp5.ogg");
+  loadSound("susp6","Susp6.ogg");
+  loadSound("correta","Correta.ogg");
+  loadSound("errada","Errada.ogg");
+  loadSound("ganhou","Ganhou.ogg");
+  loadSound("boasorte","boasorte.ogg");
+  loadSound("clique","CLIQUE1.ogg");
+  loadSound("clique2","clique2.ogg");
+  loadSound("quale","Quale.ogg");
+  loadSound("valor","valor.ogg");
+  loadSound("nomeLocucao","nome_locucao.ogg");
+  loadSound("letra","letra.ogg"); // confirmado Text1_Change/Text2_Change: \SONS\LETRA.wav a cada tecla
+  loadSound("tchau","tchau.ogg"); // confirmado FRMFIM.frm Form_Activate: \audios\tchau.wav
+  loadSound("rodada1","Rodada1.ogg");
+  loadSound("rodada2","Rodada2.ogg");
+  loadSound("rodada3","Rodada3.ogg");
+  loadSound("certeza1","Certeza1.ogg");
+  loadSound("certeza2","Certeza2.ogg");
+  loadSound("certeza3","Certeza3.ogg");
+  loadSound("tiratres","Tiratres.ogg");
+  loadSound("ouro","Ouro.ogg"); // confirmado escolha_Click arg_C=2 (PARAR): \audios\ouro.wav
+  loadSound("clique22","clique22.ogg"); // confirmado JOGREG.frm: \sons\CLIQUE22.WAV (REGRAS/JOGAR/SAIR do menu)
+  loadSound("entendeu","Entendeu.ogg");
+  loadSound("entrouBem","entrou_bem.ogg");
+  loadSound("entrouBem2","entrou_bem2.ogg");
+  loadSound("seEnrolar","se_enrolar.ogg");
+  // BUG REAL CORRIGIDO: existia um "playBanter()" que tocava uma fala aleatória (incluindo
+  // meiomilho.wav!) junto com quale.wav toda pergunta — isso nunca existiu no código original,
+  // e causava vozes sobrepostas. Removido. Os sons abaixo só tocam nos gatilhos confirmados
+  // (scheduleVoiceHint, degrau 16) — não mais num pool aleatório.
+  loadSound("faltapeito","faltapeito.ogg");
+  loadSound("meiomilho","meiomilho.ogg");
+  LADDER_VALUES_FOR_AUDIO().forEach(function(v){ loadSound("v"+v, "v"+v+".ogg"); });
+  function LADDER_VALUES_FOR_AUDIO(){ return [1000,2000,3000,4000,5000,10000,20000,30000,40000,50000,100000,200000,300000,400000,500000,1000000]; }
+  var SUSP_NAMES = ["susp1","susp2","susp3","susp4","susp5","susp6"];
+  sounds.tema.loop = true;
+  SUSP_NAMES.forEach(function(n){ sounds[n].loop = true; });
+  var currentLoop = null;
+
+  function stopLoops(){
+    sounds.tema.pause();
+    SUSP_NAMES.forEach(function(n){ sounds[n].pause(); });
+    currentLoop = null;
+  }
+  // BUG REAL CORRIGIDO (relatado pelo usuário: "quale toca antes do som anterior terminar"):
+  // o VB6 original usa um ÚNICO MediaPlayer "SOM" por tela — carregar um .wav novo nele CORTA
+  // o que estava tocando, não deixa sobrepor. Aqui cada som é um Audio() independente, então sem
+  // isso dois `play()` em sequência rápida (ex: valor falado ainda terminando + quale.wav) tocam
+  // ao mesmo tempo. Fix: antes de tocar qualquer som "SOM-channel", pausa o anterior.
+  var lastSom = null;
+  function stopSom(){
+    if(lastSom){ try{ lastSom.pause(); }catch(e){} }
+  }
+  function play(name){
+    if(muted) return;
+    var a = sounds[name];
+    if(!a) return;
+    stopSom();
+    lastSom = a;
+    try{ a.currentTime = 0; a.play().catch(function(){}); }catch(e){}
+  }
+  function playLoop(name){
+    if(muted) return;
+    var a = sounds[name];
+    try{ a.currentTime = 0; a.play().catch(function(){}); }catch(e){}
+  }
+  // Confirmado no código-fonte: a trilha de suspense é sorteada (1-6) uma vez por pergunta, não escalona com o tempo
+  function playRandomSuspense(){
+    var name = SUSP_NAMES[Math.floor(Math.random() * SUSP_NAMES.length)];
+    currentLoop = name;
+    playLoop(name);
+  }
+  document.getElementById("btn-mute").addEventListener("click", function(){
+    muted = !muted;
+    this.textContent = muted ? "🔇" : "🔊";
+    if(muted) stopLoops();
+  });
+
+  // ---------- Screens ----------
+  // Bug real corrigido: renderBoard() só era chamado no clique do botão "Ver placar", não quando
+  // o jogo termina sozinho e navega pro placar via video.onended (finishWith) — ficava com as
+  // linhas vazias. Centralizado aqui pra cobrir TODA navegação pro placar, não só o clique.
+  function show(id){
+    document.querySelectorAll(".screen").forEach(function(s){ s.classList.remove("active"); });
+    document.getElementById("screen-" + id).classList.add("active");
+    if(id === "board"){ renderBoard(); }
+    // Confirmado FRMFIM.frm: toca tchau.wav e volta sozinho pro menu (sem botão) ao entrar em "sair"
+    if(id === "sair"){
+      play("tchau");
+      setTimeout(function(){ show("start"); }, 2800);
+    }
+  }
+  document.querySelectorAll("[data-go]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      play("clique");
+      var target = btn.getAttribute("data-go");
+      if(target === "start"){ stopLoops(); }
+      show(target);
+    });
+  });
+
+  // ---------- Data ----------
+  var ALL_QUESTIONS = [];
+  var byTier = { A:[], B:[], C:[], D:[] };
+  // Bug real encontrado: se o jogador pular a abertura e clicar em Jogar rápido, o fetch abaixo
+  // ainda não tinha terminado, byTier ficava vazio, e goToValendo() caía direto no "perdeu tudo"
+  // (pool vazio = cashout com 0). Agora newGame() espera essa promise antes de sortear pergunta.
+  var questionsReady = fetch("assets/questions.json").then(function(r){ return r.json(); }).then(function(data){
+    ALL_QUESTIONS = data;
+    data.forEach(function(q){ if(byTier[q.t]) byTier[q.t].push(q); });
+  });
+
+  function tierForIndex(idx){
+    for(var k in TIERS){ if(idx >= TIERS[k][0] && idx <= TIERS[k][1]) return k; }
+    return "D";
+  }
+
+  // ---------- Game state ----------
+  var state = null;
+  function newGame(materiaSet, nome){
+    state = {
+      nome: nome || "JOGADOR",
+      materias: materiaSet,      // Set de códigos de matéria selecionados
+      idx: 0,                    // índice atual na LADDER (próxima pergunta a valer)
+      used: {},                  // perguntas já usadas nesta partida (por n)
+      // Confirmado TELAJOGO1.frm AJUDA_Click: índice 0=CARTAS,1=PLACAS(colegas),2=CONVIDADOS,3/4/5=PULAR (3 usos independentes)
+      helpsUsed: [false,false,false,false,false,false],
+      locked: false,
+      secured: 0,
+      pulou: false, // true se a pergunta atual veio de "Pular" (MemVar_550180="PULOU", confirmado)
+      confirmPending: null, // {type:"answer",index} ou {type:"parar"} — confirmação SIM/NÃO pendente
+      timer: null,
+      timeLeft: 41
+    };
+    resetHelpIcons();
+    stopLoops();
+    questionsReady.then(goToValendo);
+  }
+
+  // Confirmado TELAJOGO1.frm Proc_12_20_5457D4: ícone não-usado = AJUDA{i}.jpg habilitado,
+  // ícone usado = AJUDA{i}A.jpg desabilitado.
+  function resetHelpIcons(){
+    for(var i=0;i<6;i++){
+      var btn = document.querySelector('.help-icon[data-help="'+i+'"]');
+      btn.disabled = false;
+      document.getElementById("icon-"+i).src = "assets/img/AJUDA"+i+".jpg";
+    }
+  }
+  function markHelpUsed(i){
+    state.helpsUsed[i] = true;
+    var btn = document.querySelector('.help-icon[data-help="'+i+'"]');
+    btn.disabled = true;
+    document.getElementById("icon-"+i).src = "assets/img/AJUDA"+i+"A.jpg";
+  }
+
+  function poolFor(tier){
+    var pool = byTier[tier].filter(function(q){
+      if(state.used[q.n]) return false;
+      if(!state.materias.has(q.m)) return false;
+      return true;
+    });
+    if(pool.length === 0){
+      // fallback: ignora a matéria se o filtro esgotar o nível (banco finito)
+      pool = byTier[tier].filter(function(q){ return !state.used[q.n]; });
+    }
+    return pool;
+  }
+
+  // Tela "VALENDO X" entre perguntas: mostra a imagem oficial do valor + toca o áudio falado, igual ao jogo original
+  // Confirmado VALENDO.frm TimerGeral_Timer: pisca 7 frames de brilho (Image0-6) por ~8 ciclos
+  // enquanto espera o VALOR.wav/valor falado, na posição fixa do "fundo_valores"
+  function playValendoSparkle(){
+    var img = document.getElementById("valendo-sparkle");
+    var step = 0;
+    img.style.display = "block";
+    img.src = "assets/img/valendo_sparkle_0.jpg";
+    var iv = setInterval(function(){
+      step++;
+      if(step >= 8){ clearInterval(iv); img.style.display = "none"; return; }
+      img.src = "assets/img/valendo_sparkle_" + (step % 7) + ".jpg";
+    }, 180);
+  }
+
+  function goToValendo(){
+    clearTimeout(state.timer); clearInterval(state.timer); clearTimeout(state.voiceHintTimer);
+    stopLoops();
+    var tier = tierForIndex(state.idx);
+    var pool = poolFor(tier);
+    if(pool.length === 0){ return finish("cashout"); }
+    var q = pool[Math.floor(Math.random() * pool.length)];
+    state.used[q.n] = true;
+    state.current = q;
+
+    var value = LADDER[state.idx];
+    document.getElementById("valendo-name").textContent = state.nome;
+    document.getElementById("valendo-img").src = "assets/img/valendo_" + value + ".jpg";
+    show("valendo");
+    playValendoSparkle();
+
+    // Confirmado VALENDO.frm (revelaValorDaRodada, lido direto): depois do jingle VALOR.wav toca
+    // UM som só — rodada1/2/3.wav nos degraus 1/6/11 (ou 1000/10000/100000.wav se a pergunta foi
+    // puxada via Pular), e em todo resto apenas o valor falado (v{valor}.ogg). NÃO são dois sons em
+    // sequência — é uma escolha única. (Bug corrigido: antes tocava o valor falado aqui E DEPOIS
+    // rodada1/etc de novo lá no startQuestion, sobrepondo os dois.)
+    var degrau = state.idx + 1;
+    var soundName;
+    if(degrau === 1) soundName = state.pulou ? "v1000" : "rodada1";
+    else if(degrau === 6) soundName = state.pulou ? "v10000" : "rodada2";
+    else if(degrau === 11) soundName = state.pulou ? "v100000" : "rodada3";
+    else soundName = "v" + value;
+    state.pulou = false;
+    var valueSound = sounds[soundName];
+    var advanced = false;
+    function advance(){
+      if(advanced) return;
+      advanced = true;
+      startQuestion(q);
+    }
+    // Encadeado de verdade (ouve o 'ended' de cada som), não delay chutado — valor.wav só DEPOIS
+    // termina de tocar é que o valor falado começa, senão fica som em cima de som.
+    // BUG REAL CORRIGIDO: a salvaguarda estava em 6000ms, mais curta que os áudios de verdade
+    // (Rodada1=8.6s, Rodada2=10.15s, v200000=8.1s, v1000000=8.4s etc, medidos direto no arquivo) —
+    // cortava o áudio no meio quase toda vez e já avançava pra pergunta. 15s dá folga de verdade
+    // pra qualquer um desses tocar inteiro; só serve de rede de segurança se algo falhar.
+    var safety = setTimeout(advance, 15000);
+    function playValueSpeech(){
+      if(muted || !valueSound){ clearTimeout(safety); advance(); return; }
+      stopSom(); lastSom = valueSound;
+      valueSound.currentTime = 0;
+      valueSound.onended = function(){ clearTimeout(safety); advance(); };
+      valueSound.play().catch(function(){ clearTimeout(safety); advance(); });
+    }
+    if(muted){ playValueSpeech(); }
+    else {
+      var valorSound = sounds.valor;
+      stopSom(); lastSom = valorSound;
+      valorSound.currentTime = 0;
+      valorSound.onended = playValueSpeech;
+      valorSound.play().then(function(){}).catch(playValueSpeech);
+    }
+  }
+
+  function startQuestion(q){
+    show("game");
+    renderQuestion(q);
+    renderPayout();
+    startTimer();
+    play("quale"); // confirmado pelo usuário: toca quando a pergunta aparece, não na tela "valendo"
+    // NOTA: o anúncio de rodada1/2/3 (ou valor falado se pulou) agora é decidido uma única vez em
+    // goToValendo(), junto com o jingle VALOR.wav — não se repete aqui (era bug de duplicação).
+    // meiomilho.wav foi movido pra tocar em answer() (ao confirmar o degrau 15), não aqui — tocar
+    // junto com quale.wav causava duas vozes sobrepostas (bug real corrigido).
+    scheduleVoiceHint();
+  }
+
+  // Confirmado TimerGeral2_Timer (TELAJOGO1.js): aos 15s de pergunta sem resposta, toca UMA de 5
+  // dicas de voz aleatórias (só uma vez por pergunta — global_116 zera depois de tocar)
+  function scheduleVoiceHint(){
+    clearTimeout(state.voiceHintTimer);
+    state.voiceHintTimer = setTimeout(function(){
+      if(!state || state.locked) return;
+      var n = 1 + Math.floor(Math.random() * 5);
+      if(n === 1) play("entendeu");
+      else if(n === 2) play("entrouBem");
+      else if(n === 3) play("entrouBem2");
+      else if(n === 4) play("entendeu");
+      else play("seEnrolar");
+    }, 15000);
+  }
+
+  // Botões de resposta são fixos no HTML (posição real do .frm) — só conecta o clique 1x
+  document.querySelectorAll(".ans-hit").forEach(function(btn){
+    var i = parseInt(btn.dataset.i, 10);
+    btn.addEventListener("click", function(){ pickAnswer(i); });
+  });
+
+  function renderQuestion(q){
+    state.confirmPending = null;
+    document.getElementById("help-panel").classList.remove("show");
+    document.getElementById("q-text").textContent = q.q;
+    setBottomBar("normal");
+    q.r.forEach(function(resp, i){
+      var row = document.getElementById("ans-" + i);
+      row.textContent = resp;
+      row.classList.remove("dimmed", "picked");
+      var hit = document.querySelector('.ans-hit[data-i="' + i + '"]');
+      hit.classList.remove("dimmed");
+      hit.disabled = false;
+    });
+  }
+
+  // Confirmado TELAJOGO1.js setBottomBar: os diamantes Ajuda/Parar (já desenhados no fundo) trocam
+  // de imagem pra SIM/NÃO (BTSIM_S.jpg/BTNAO_S.jpg) sempre que há uma confirmação pendente.
+  // Confirmado escolha_Click/resposta_Click (TELAJOGO1.frm): os hotspots de AJUDA/PARAR (idle,
+  // diamantes já desenhados no fundo = escolha[3]/escolha[2]) e os de SIM/NAO (após escolher
+  // resposta = escolha[0]/escolha[1]) são controles DIFERENTES do original, com posição E
+  // TAMANHO distintos — não é a mesma caixa só trocando a imagem por dentro. Tamanho real de
+  // cada estado = dimensão NATIVA do .jpg carregado (Image sem Stretch, mesmo padrão confirmado
+  // em todo o resto do projeto): btsim_s.jpg=82x80px, btnao_s.jpg=86x84px, de uma tela 640x480.
+  var leftBtn = document.getElementById("help-trigger");
+  var rightBtn = document.getElementById("btn-parar");
+  var IDLE_POS = {
+    left: { left:"16.41%", top:"81.04%", width:"6.56%", height:"10%" },
+    right:{ left:"30.94%", top:"81.67%", width:"6.72%", height:"9.38%" }
+  };
+  var CONFIRM_POS = {
+    left: { left:"13.28%", top:"77.71%", width:"12.81%", height:"16.67%" },
+    right:{ left:"27.5%",  top:"77.08%", width:"13.44%", height:"17.5%" }
+  };
+  function applyPos(el, pos){
+    el.style.left = pos.left; el.style.top = pos.top;
+    el.style.width = pos.width; el.style.height = pos.height;
+  }
+  function setBottomBar(mode){
+    var leftImg = document.getElementById("help-trigger-img");
+    var rightImg = document.getElementById("btn-parar-img");
+    if(mode === "confirm"){
+      applyPos(leftBtn, CONFIRM_POS.left); applyPos(rightBtn, CONFIRM_POS.right);
+      leftImg.src = "assets/img/btsim_s.jpg"; leftImg.classList.add("show");
+      rightImg.src = "assets/img/btnao_s.jpg"; rightImg.classList.add("show");
+    } else {
+      applyPos(leftBtn, IDLE_POS.left); applyPos(rightBtn, IDLE_POS.right);
+      leftImg.classList.remove("show");
+      rightImg.classList.remove("show");
+    }
+  }
+
+  // Confirmado resposta_Click (TELAJOGO1.js:223-244): clicar numa resposta já trava a escolha
+  // (MemVar_550198=true) e mostra o par SIM/NÃO — NÃO é um clique duplo na mesma alternativa como
+  // eu tinha antes. Só decide ACERTOU/ERROU depois que o jogador confirma no SIM.
+  function pickAnswer(i){
+    if(state.locked || state.confirmPending) return; // já tem uma escolha pendente, ignora
+    document.querySelectorAll(".ans-row").forEach(function(r){ r.classList.remove("picked"); });
+    document.getElementById("ans-" + i).classList.add("picked"); // ForeColor=&HFF confirmado
+    play("certeza2"); // confirmado: SEMPRE Certeza2.wav, não é sorteio entre 1/2/3
+    setBottomBar("confirm");
+    state.confirmPending = { type: "answer", index: i };
+  }
+
+  // Tabela EXATA confirmada no código-fonte (VALENDO.frm, Proc_2_6_54ABC8): não existem pontos de
+  // segurança intermediários. ERRAR = metade do PARAR em toda rodada, exceto a última
+  // (pergunta do milhão), onde errar derruba pra ZERO sem rede de segurança nenhuma.
+  function errarAmount(){
+    if(state.idx === LADDER.length - 1) return 0; // última rodada: sem metade, vai pra zero
+    var parar = state.idx === 0 ? 0 : LADDER[state.idx - 1];
+    return Math.floor(parar / 2);
+  }
+  // Confirmado TELAJOGO1.frm Proc_12_15_540C7C:1750 — \JPGS1\PASTILHAS\ouro{degrau}.jpg, degrau 1-indexado (state.idx+1)
+  function renderPayout(){
+    document.getElementById("ouro-img").src = "assets/img/OURO" + (state.idx + 1) + ".jpg";
+    document.getElementById("btn-parar").disabled = (state.idx === 0);
+  }
+
+  // Confirmado TELAJOGO1.frm: Label5 (MemVar_5500FE) começa em &H29=41 e decrementa; Image8 troca
+  // de frame RELOGIO_N.jpg conforme o tempo avança (MemVar_550100, 0..40, pula o frame 10).
+  var TIMER_SECONDS = 41;
+  function startTimer(){
+    state.timeLeft = TIMER_SECONDS;
+    stopLoops();
+    playRandomSuspense(); // sorteada 1x por pergunta, confirmado no código-fonte (susp1..6 aleatório)
+    updateTimerUI();
+    state.timer = setInterval(function(){
+      state.timeLeft--;
+      updateTimerUI();
+      if(state.timeLeft <= 0){
+        clearInterval(state.timer);
+        // Confirmado TELAJOGO1.js tempoEsgotado(): evento externo que força resultado ERROU —
+        // mesmo fluxo de uma resposta errada normal (sem texto na tela, só pisca a faixa certa).
+        answer(-1);
+      }
+    }, 1000);
+  }
+  function updateTimerUI(){
+    var frame = TIMER_SECONDS - 1 - state.timeLeft; // 0..40, cresce conforme o tempo passa
+    if(frame === 10) frame = 11; // confirmado: o original pula o frame 10
+    frame = Math.max(0, Math.min(40, frame));
+    document.getElementById("timer-clock").src = "assets/img/relogio_" + frame + ".jpg";
+    document.getElementById("timer-secs").textContent = Math.max(0, state.timeLeft);
+  }
+
+  function lockAnswers(){
+    document.querySelectorAll(".ans-hit").forEach(function(b){ b.disabled = true; });
+  }
+
+  // Confirmado TimerGeral_Timer estado "PISCA" (TELAJOGO1.js mostrarFaixaPiscando/Proc_12_16):
+  // pisca a faixa colorida (FAIXA1-4.jpg) sobre a resposta CERTA 4 vezes antes de resolver
+  // ACERTOU/ERROU — é assim que o jogo revela qual era a certa, não uma borda CSS.
+  var FAIXA_POS = [
+    {top:"39.375%", left:"3.75%"},
+    {top:"48.958%", left:"3.594%"},
+    {top:"58.125%", left:"3.438%"},
+    {top:"67.292%", left:"4.219%"}
+  ];
+  // Tamanho NATIVO real de cada faixa{N}.jpg (medido direto no arquivo, de uma tela 640x480) —
+  // não são todas do mesmo tamanho (306x47, 308x45, 312x44, 299x44px), por isso cada uma precisa
+  // do seu próprio width/height em vez de uma caixa CSS única (bug real corrigido).
+  var FAIXA_SIZE = [
+    {width:"47.81%", height:"9.79%"},
+    {width:"48.13%", height:"9.38%"},
+    {width:"48.75%", height:"9.17%"},
+    {width:"46.72%", height:"9.17%"}
+  ];
+  function piscaFaixa(correctIdx, cb){
+    var img = document.getElementById("faixa-img");
+    var pos = FAIXA_POS[correctIdx];
+    var size = FAIXA_SIZE[correctIdx];
+    img.style.top = pos.top; img.style.left = pos.left;
+    img.style.width = size.width; img.style.height = size.height;
+    img.src = "assets/img/faixa" + (correctIdx + 1) + ".jpg";
+    var step = 0;
+    var iv = setInterval(function(){
+      step++;
+      img.style.display = (step % 2 === 1) ? "block" : "none";
+      if(step >= 8){ clearInterval(iv); img.style.display = "none"; cb(); }
+    }, 180);
+  }
+
+  function answer(i){
+    if(state.locked) return;
+    state.locked = true;
+    clearTimeout(state.timer); clearInterval(state.timer); clearTimeout(state.voiceHintTimer);
+    stopLoops();
+    var correct = state.current.c;
+    lockAnswers();
+    var wrong = i !== correct;
+    play(wrong ? "errada" : "correta");
+    piscaFaixa(correct, function(){
+      if(wrong){
+        setTimeout(function(){ loseRun(); }, 600);
+        return;
+      }
+      state.idx++;
+      // Confirmado TELAJOGO1.frm (estado "ENTREGAR O OURO", degrau 16): toca meiomilho.wav no modo
+      // 1 jogador ao confirmar que vai tentar a pergunta do milhão — movido pra cá (não mais junto
+      // com quale.wav em startQuestion, que causava som sobreposto)
+      if(state.idx === LADDER.length - 1) play("meiomilho");
+      setTimeout(function(){
+        state.locked = false;
+        if(state.idx >= LADDER.length){ finish("win"); }
+        else { goToValendo(); }
+      }, 600);
+    });
+  }
+
+  function loseRun(){
+    var amount = errarAmount();
+    finishWith(amount, "bad");
+  }
+
+  function finish(kind){
+    if(kind === "win"){ finishWith(LADDER[LADDER.length-1], "win"); return; }
+    if(kind === "cashout"){ finishWith(state.idx === 0 ? 0 : LADDER[state.idx-1], "cashout"); return; }
+  }
+
+  // Confirmado QTGANHOU.frm TimerGeral_Timer (loc_541D17-541E8A): Image1 troca de frame a cada
+  // 3 ticks do timer. Se MemVar_550128 (valor final) === 0: MALA1..8.jpg (perdeu tudo). Senão:
+  // MALETA1..10.jpg (ganhou), e a partir do frame 8 Image1 é reposicionado via CÓDIGO pra
+  // Left=136,Top=104 PIXEL (ScaleMode=3). BUG REAL GRAVE CORRIGIDO: eu tinha dividido esses pixels
+  // pela base errada (8355/7200, o ClientWidth/Height DECLARADO do .frm) em vez da base real da
+  // tela (640x480, confirmado medindo QTGANHOU.jpg) — resultado: 1.63%/1.44% (quase o canto
+  // superior esquerdo) em vez do correto 21.25%/21.67%. Isso jogava a maleta inteira fora do
+  // lugar nos últimos frames da animação.
+  function playResultCascade(amount, cb){
+    var img = document.getElementById("result-img");
+    var isLoss = amount === 0;
+    var prefix = isLoss ? "mala" : "maleta";
+    var total = isLoss ? 8 : 10;
+    var frame = 1;
+    img.src = "assets/img/" + prefix + frame + ".jpg";
+    var iv = setInterval(function(){
+      frame++;
+      if(frame > total){ clearInterval(iv); cb(); return; }
+      img.src = "assets/img/" + prefix + frame + ".jpg";
+      if(!isLoss && frame >= 8){ img.style.left = "21.25%"; img.style.top = "21.67%"; }
+    }, 180);
+  }
+
+  function playEncerraVideo(){
+    var video = document.getElementById("result-video");
+    video.style.display = "block";
+    video.currentTime = 0;
+    video.play().catch(function(){});
+    video.onended = function(){ show("board"); };
+  }
+
+  // BUG REAL CORRIGIDO (QTGANHOU.frm Form_Activate, loc_53C30D): quando o prêmio é EXATAMENTE
+  // R$1.000.000, o original pula a animação inteira da maleta abrindo (sem tocar TEMA_2.wav, sem
+  // trocar frame nenhum) — vai direto pro estado "CARREGA O ENCERRA.AVI" após só 1 segundo. Minha
+  // versão anterior rodava a animação completa igual a qualquer outro valor, o que nunca acontece
+  // no jogo original pra esse caso específico.
+  function finishWith(amount, kind, nomeOverride){
+    if(state){ clearTimeout(state.timer); clearInterval(state.timer); clearTimeout(state.voiceHintTimer); }
+    stopLoops();
+    saveScore(nomeOverride || (state && state.nome), amount);
+    var img = document.getElementById("result-img");
+    var video = document.getElementById("result-video");
+    video.pause(); video.style.display = "none";
+    img.style.left = "21.875%"; img.style.top = "21.46%";
+    show("result");
+
+    if(amount === 1000000){
+      setTimeout(playEncerraVideo, 1000); // confirmado: só 1s de espera, sem cascata nem TEMA_2
+      return;
+    }
+
+    play("tema2"); // confirmado QTGANHOU.frm:220 (TEMA_2.wav) — só toca fora do caso de 1 milhão
+    playResultCascade(amount, function(){
+      // Confirmado TimerGeral_Timer (loc_541FEC..loc_54214D): se o valor NÃO é 0 (perdeu tudo),
+      // carrega \JPGS\p{valor}.jpg e segura 6 SEGUNDOS reais; se é 0, segura só 3 segundos sem
+      // trocar imagem (fica no último frame MALA8.jpg). BUG REAL CORRIGIDO: depois dessa espera,
+      // o estado vira "WAIT" e cai DIRETO no bloco que fecha tudo e navega pro placar — o vídeo
+      // encerra.avi NUNCA toca fora do caso de 1 milhão (só ele cai no estado "CARREGA O
+      // ENCERRA.AVI"). Eu tocava o vídeo sempre, pra qualquer prêmio.
+      var waitMs;
+      if(amount > 0){
+        img.src = "assets/img/p" + amount + ".jpg";
+        waitMs = 6000;
+      } else {
+        waitMs = 3000;
+      }
+      setTimeout(function(){
+        sounds.tema2.pause();
+        show("board"); // sem vídeo — vai direto pro placar, confirmado acima
+      }, waitMs);
+    });
+  }
+
+  // Confirmado escolha_Click (TELAJOGO1.js): este diamante é PARAR quando não há confirmação
+  // pendente (abre "tem certeza?"), e vira NÃO (cancela) quando já tem uma pendente.
+  document.getElementById("btn-parar").addEventListener("click", function(){
+    if(!state || state.locked) return;
+    if(state.confirmPending){
+      play("clique2");
+      document.querySelectorAll(".ans-row").forEach(function(r){ r.classList.remove("picked"); });
+      state.confirmPending = null;
+      setBottomBar("normal");
+      return;
+    }
+    if(state.idx === 0) return; // sem valor garantido ainda, PARAR fica desabilitado
+    play("ouro"); // confirmado loc_53F73B: \audios\ouro.wav
+    state.confirmPending = { type: "parar" };
+    setBottomBar("confirm");
+  });
+
+  // ---------- Ajudas ----------
+  // Confirmado TELAJOGO1.frm AJUDA_Click(arg_C): 0=CARTAS, 1=PLACAS(colegas), 2=CONVIDADOS, 3/4/5=PULAR.
+  // Todo popup (menu de seleção, CARTAS, PLACAS, CONVIDADOS) abre no MESMO retângulo (.help-panel).
+  function showHelpSub(id){
+    document.querySelectorAll('.help-panel > div').forEach(function(d){ d.classList.remove("show"); });
+    document.getElementById(id).classList.add("show");
+  }
+  function closeHelpPanel(){
+    document.getElementById("help-panel").classList.remove("show");
+  }
+  // Confirmado escolha_Click (TELAJOGO1.js): este diamante é AJUDA quando não há confirmação
+  // pendente (abre o menu de ajudas), e vira SIM (confirma) quando já tem uma pendente.
+  document.getElementById("help-trigger").addEventListener("click", function(){
+    if(!state || state.locked) return;
+    if(state.confirmPending){
+      play("clique");
+      var pending = state.confirmPending;
+      state.confirmPending = null;
+      setBottomBar("normal");
+      if(pending.type === "answer") answer(pending.index);
+      else if(pending.type === "parar") finish("cashout");
+      return;
+    }
+    play("clique");
+    showHelpSub("help-select");
+    document.getElementById("help-panel").classList.add("show");
+  });
+
+  document.querySelectorAll(".help-icon:not(.help-icon2)").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var i = parseInt(btn.dataset.help, 10);
+      if(state.helpsUsed[i] || state.locked) return;
+      markHelpUsed(i);
+      if(i === 0) runCartas();
+      else if(i === 1) runPlacas();
+      else if(i === 2) runConvidados();
+      else runPula(); // 3, 4 ou 5 — confirmado: três ícones de "pular" independentes, mesma ação
+    });
+  });
+
+  // CARTAS (arg_C=0): toca carta.wav ou TIRATRES.WAV (MemVar_550106, não rastreável no decompilado —
+  // sorteamos). CARTA_CLIQUE é clicável dentro do painel; a lógica exata de quantas erradas some não
+  // foi extraída do form (ressalva do levantamento) — mantemos sorteio 0-3 como aproximação sinalizada.
+  // Confirmado CARTA_CLIQUE_Click (TELAJOGO1.frm/.js): sorteia 1 de 4 cartas, cada uma com uma
+  // imagem PRÓPRIA (rei/as/dois/tres.jpg) e um número fixo de respostas erradas eliminadas —
+  // REI=0 (sem efeito, só "furou"), ÁS=1, DOIS=2, TRÊS=3 (sobra só a certa). O índice EXATO de
+  // qual(is) resposta(s) errada(s) some(m) ficou ambíguo no decompilador (ver TELAJOGO1.js:264-276);
+  // aqui sorteia aleatoriamente entre as erradas, nunca a certa — mesma reconstrução da tradução
+  // original, só que agora MOSTRANDO a carta sorteada (faltava o feedback visual real).
+  var CARTAS_TABLE = [
+    { img: "rei.jpg", howMany: 0 },
+    { img: "as.jpg", howMany: 1 },
+    { img: "dois.jpg", howMany: 2 },
+    { img: "tres.jpg", howMany: 3 }
+  ];
+  function runCartas(){
+    play("clique");
+    showHelpSub("help-cartas-panel");
+    var clicked = false;
+    var cartaImg = document.getElementById("carta-img");
+    cartaImg.style.display = "none";
+    document.getElementById("carta-clique").onclick = function(){
+      if(clicked) return; clicked = true;
+      var carta = CARTAS_TABLE[Math.floor(Math.random() * 4)];
+      play(Math.random() < 0.5 ? "clique" : "tiratres");
+      cartaImg.src = "assets/img/" + carta.img;
+      cartaImg.style.display = "block";
+      var wrong = [0,1,2,3].filter(function(i){ return i !== state.current.c; });
+      wrong.sort(function(){ return Math.random() - 0.5; });
+      var toRemove = wrong.slice(0, carta.howMany);
+      var hits = document.querySelectorAll(".ans-hit");
+      toRemove.forEach(function(i){
+        hits[i].classList.add("dimmed"); hits[i].disabled = true;
+        document.getElementById("ans-" + i).classList.add("dimmed");
+      });
+      setTimeout(closeHelpPanel, 1400); // dá tempo do jogador ver qual carta saiu antes de fechar
+    };
+  }
+
+  // PLACAS/colegas (arg_C=1, Proc_12_18_543778): x = Int(51*Rnd+1) vai pra resposta certa invertido
+  // Fórmula EXATA confirmada (TELAJOGO1.js Proc_12_18_543778, não é mais aproximação):
+  // base = sorteio 1..51; base = 100-base (fatia da certa, 49..99); resto dividido em B/C/D=C.
+  function runPlacas(){
+    play("clique");
+    showHelpSub("help-placas-panel");
+    var correct = state.current.c + 1; // "1".."4"
+    var x = 1 + Math.floor(Math.random() * 51);
+    var base = 100 - x;
+    var restoB = Math.floor((100 - base) / 2);
+    var restoC = Math.floor((100 - base - restoB) / 2);
+    var restoD = restoC;
+    var sequencia = {
+      1: [base, restoD, restoC, restoB],
+      2: [restoB, base, restoC, restoD],
+      3: [restoD, restoB, base, restoD],
+      4: [restoB, restoD, restoC, base]
+    };
+    var valores = sequencia[correct];
+    valores.forEach(function(v, i){
+      document.getElementById("placa-pct-" + i).textContent = v + "%";
+    });
+    setTimeout(closeHelpPanel, 4000);
+  }
+
+  // CONVIDADOS (arg_C=2, Proc_12_19_53C8DC): tabela FIXA hardcoded no código, não é sorteio
+  function runConvidados(){
+    play("clique");
+    showHelpSub("help-convidados-panel");
+    var CONVIDADOS_TABLE = { 1:[1,3,1], 2:[4,2,2], 3:[4,3,3], 4:[1,4,4] };
+    var guesses = CONVIDADOS_TABLE[state.current.c + 1];
+    // Confirmado TELAJOGO1.js:723 — mostra o NÚMERO direto (percentual_conv[i].Caption = v), não letra
+    guesses.forEach(function(g, i){
+      document.getElementById("conv-pct-" + i).textContent = g;
+    });
+    setTimeout(closeHelpPanel, 4000);
+  }
+
+  // PULAR (arg_C=3/4/5): troca a pergunta atual por outra do mesmo nível, sem usar tentativa
+  function runPula(){
+    play("clique");
+    closeHelpPanel();
+    state.used[state.current.n] = true;
+    state.pulou = true; // confirmado TELAJOGO1.frm: MemVar_550180="PULOU" — troca rodadaN.wav por v{valor}
+    goToValendo();
+  }
+
+  // ========================================================================
+  // MODO 2 JOGADORES (TELAJOGO.frm) — mesma máquina de estados do TELAJOGO1,
+  // duplicada por jogador (MemVar_5501A8 = 1/2 decide de quem é a vez).
+  //
+  // BUG REAL DO JOGO ORIGINAL confirmado e MANTIDO a pedido do usuário:
+  // resolverPremioEEncerrar (Proc_3_17_5382E0, .frm linhas 2260-2300) navega
+  // pra QTGANHOU incondicionalmente assim que QUALQUER jogador erra/para/ganha
+  // tudo — sem checar se o outro jogador já jogou. A partida INTEIRA acaba na
+  // primeira "queda" de qualquer um dos dois, mesmo que o outro nunca tenha
+  // jogado. Implementado fielmente, sem "consertar".
+  //
+  // BUG REAL DO JOGO ORIGINAL também confirmado: resposta/Image2(faixa) NUNCA
+  // se repositionam por código (só pergunta/coloca_ouro/painel de ajuda/
+  // escolha[2-3]/Image1 se movem) — ficam sempre no slot esquerdo mesmo no
+  // turno do jogador 2. Mantido fiel, não corrigido.
+  // ========================================================================
+  var game2 = null;
+
+  // Posições reais por lado (pixel code-set, base 640x480 — TELAJOGO.frm
+  // declara ClientWidth=11340/756px, mesma classe de bug de base errada já
+  // encontrada 2x nesta sessão; usar sempre /640, nunca /756).
+  var SIDE2 = {
+    1: {
+      pasta: "e", bg: "assets/img/e_LADOE.jpg",
+      pergunta: { left:"1.25%", top:"19.375%" },
+      ouroLeft: "6.5625%",
+      slotLeft: "10.3125%",  // AJUDA idle / SIM confirmado
+      slotRight: "21.875%",  // PARAR idle / NAO confirmado
+      ajudaExpandLeft: "10.3125%",
+      nomeE: "#00ff00", nomeD: "#008000"
+    },
+    2: {
+      pasta: "d", bg: "assets/img/d_LADOD.jpg",
+      pergunta: { left:"55.16%", top:"18.96%" },
+      ouroLeft: "55.78%",
+      slotLeft: "66.5625%",
+      slotRight: "78.59%",
+      ajudaExpandLeft: "66.5625%",
+      nomeE: "#008000", nomeD: "#00ff00"
+    }
+  };
+  var SLOT_TOP = "77.083%", SLOT_SIZE = { width:"11.406%", height:"15.208%" };
+
+  function applySide2P(side){
+    var s = SIDE2[side];
+    document.getElementById("screen-game2").style.backgroundImage = "url('" + s.bg + "')";
+    var q = document.getElementById("q-text2");
+    q.style.left = s.pergunta.left; q.style.top = s.pergunta.top;
+    document.getElementById("ouro-img2").style.left = s.ouroLeft;
+    document.getElementById("nome2-e").style.color = s.nomeE;
+    document.getElementById("nome2-d").style.color = s.nomeD;
+    var left = document.getElementById("help-trigger2"); // AJUDA idle / SIM confirmado
+    var right = document.getElementById("btn-parar2");    // PARAR idle / NAO confirmado
+    [left, right].forEach(function(el){
+      el.style.position = "absolute"; el.style.top = SLOT_TOP;
+      el.style.width = SLOT_SIZE.width; el.style.height = SLOT_SIZE.height;
+    });
+    left.style.left = s.slotLeft; right.style.left = s.slotRight;
+    // Picture1/CARTAS/PLACAS/CONVIDADOS: confirmado código-set Left=2px(P1)/358px(P2), Top=333px
+    document.getElementById("help-panel2").style.left = side === 1 ? "0.3125%" : "55.9375%";
+    document.getElementById("help-select2").style.backgroundImage = "url('assets/img/" + s.pasta + "_tapa_ajuda.jpg')";
+  }
+
+  // Sincroniza os ícones com o helpsUsed DO JOGADOR DA VEZ (cada jogador tem seu próprio
+  // progresso de ajudas usadas — trocar de jogador precisa trocar qual estado aparece,
+  // nunca "resetar" as ajudas já gastas por ninguém).
+  function syncHelpIcons2(){
+    var s = SIDE2[game2.active];
+    var usados = activePlayer2().helpsUsed;
+    for(var i=0;i<6;i++){
+      var btn = document.querySelector('.help-icon2[data-help="'+i+'"]');
+      btn.disabled = usados[i];
+      document.getElementById("icon2-"+i).src = "assets/img/" + s.pasta + "_AJUDA"+i+(usados[i] ? "A" : "")+".jpg";
+    }
+  }
+  function markHelpUsed2(i){
+    var s = SIDE2[game2.active];
+    var p = game2.players[game2.active];
+    p.helpsUsed[i] = true;
+    var btn = document.querySelector('.help-icon2[data-help="'+i+'"]');
+    btn.disabled = true;
+    document.getElementById("icon2-"+i).src = "assets/img/" + s.pasta + "_AJUDA"+i+"A.jpg";
+  }
+
+  function poolFor2(tier){
+    var pool = byTier[tier].filter(function(q){
+      if(game2.used[q.n]) return false;
+      if(!game2.materias.has(q.m)) return false;
+      return true;
+    });
+    if(pool.length === 0){ pool = byTier[tier].filter(function(q){ return !game2.used[q.n]; }); }
+    return pool;
+  }
+
+  function new2PGame(materiaSet, nome1, nome2){
+    game2 = {
+      materias: materiaSet,
+      used: {},
+      active: 1, // MemVar_5501A8 — sempre começa no jogador 1
+      players: {
+        1: { nome: nome1, idx: 0, helpsUsed:[false,false,false,false,false,false], pulou:false, done:false },
+        2: { nome: nome2, idx: 0, helpsUsed:[false,false,false,false,false,false], pulou:false, done:false }
+      },
+      locked:false, confirmPending:null, current:null,
+      timer:null, timeLeft:41, voiceHintTimer:null
+    };
+    state = null; // garante que não há partida de 1 jogador concorrente
+    // Confirmado Form_Activate: NOMEE = sempre nome do jogador 1 (lado esquerdo/JPGSE), NOMED =
+    // sempre nome do jogador 2 (lado direito/JPGSD) — a identidade do lado nunca muda, só a COR
+    // (quem está jogando agora) muda a cada turno.
+    document.getElementById("nome2-e").textContent = nome1;
+    document.getElementById("nome2-d").textContent = nome2;
+    stopLoops();
+    questionsReady.then(goToValendo2);
+  }
+
+  function activePlayer2(){ return game2.players[game2.active]; }
+
+  function tierForIndex2(idx){
+    for(var k in TIERS){ if(idx >= TIERS[k][0] && idx <= TIERS[k][1]) return k; }
+    return "D";
+  }
+
+  function goToValendo2(){
+    clearTimeout(game2.timer); clearInterval(game2.timer); clearTimeout(game2.voiceHintTimer);
+    stopLoops();
+    var p = activePlayer2();
+    var tier = tierForIndex2(p.idx);
+    var pool = poolFor2(tier);
+    if(pool.length === 0){ return finish2(p.idx === 0 ? 0 : LADDER[p.idx-1]); } // banco esgotado = cashout
+    var q = pool[Math.floor(Math.random() * pool.length)];
+    game2.used[q.n] = true;
+    game2.current = q;
+
+    var value = LADDER[p.idx];
+    document.getElementById("valendo-name").textContent = p.nome;
+    document.getElementById("valendo-img").src = "assets/img/valendo_" + value + ".jpg";
+    show("valendo");
+    playValendoSparkle();
+
+    var degrau = p.idx + 1;
+    var soundName;
+    if(degrau === 1) soundName = p.pulou ? "v1000" : "rodada1";
+    else if(degrau === 6) soundName = p.pulou ? "v10000" : "rodada2";
+    else if(degrau === 11) soundName = p.pulou ? "v100000" : "rodada3";
+    else soundName = "v" + value;
+    p.pulou = false;
+    var valueSound = sounds[soundName];
+    var advanced = false;
+    function advance(){ if(advanced) return; advanced = true; startQuestion2(q); }
+    var safety = setTimeout(advance, 15000); // mesmo fix do 1P: áudio real passa de 10s em alguns casos
+    function playValueSpeech(){
+      if(muted || !valueSound){ clearTimeout(safety); advance(); return; }
+      stopSom(); lastSom = valueSound;
+      valueSound.currentTime = 0;
+      valueSound.onended = function(){ clearTimeout(safety); advance(); };
+      valueSound.play().catch(function(){ clearTimeout(safety); advance(); });
+    }
+    if(muted){ playValueSpeech(); }
+    else {
+      var valorSound = sounds.valor;
+      stopSom(); lastSom = valorSound;
+      valorSound.currentTime = 0;
+      valorSound.onended = playValueSpeech;
+      valorSound.play().then(function(){}).catch(playValueSpeech);
+    }
+  }
+
+  function startQuestion2(q){
+    applySide2P(game2.active);
+    syncHelpIcons2();
+    show("game2");
+    renderQuestion2(q);
+    renderPayout2();
+    startTimer2();
+    play("quale");
+    scheduleVoiceHint2();
+  }
+
+  function scheduleVoiceHint2(){
+    clearTimeout(game2.voiceHintTimer);
+    game2.voiceHintTimer = setTimeout(function(){
+      if(!game2 || game2.locked) return;
+      var n = 1 + Math.floor(Math.random() * 5);
+      if(n === 1) play("entendeu");
+      else if(n === 2) play("entrouBem");
+      else if(n === 3) play("entrouBem2");
+      else if(n === 4) play("entendeu");
+      else play("seEnrolar");
+    }, 15000);
+  }
+
+  document.querySelectorAll(".ans-hit2").forEach(function(btn){
+    var i = parseInt(btn.dataset.i, 10);
+    btn.addEventListener("click", function(){ pickAnswer2(i); });
+  });
+
+  function renderQuestion2(q){
+    game2.confirmPending = null;
+    document.getElementById("help-panel2").classList.remove("show");
+    document.getElementById("q-text2").textContent = q.q;
+    setBottomBar2("normal");
+    q.r.forEach(function(resp, i){
+      var row = document.getElementById("ans2-" + i);
+      row.textContent = resp;
+      row.classList.remove("dimmed", "picked");
+      var hit = document.querySelector('.ans-hit2[data-i="' + i + '"]');
+      hit.classList.remove("dimmed");
+      hit.disabled = false;
+    });
+  }
+
+  // SIM/NAO/PARAR/AJUDA aqui são todos 73x73px no slot fixo (confirmado medindo
+  // os .jpg reais de Jpgse/Jpgsd) — ao contrário do TELAJOGO1, não muda de tamanho
+  // nem de posição entre idle/confirmado (só a imagem dentro troca).
+  function setBottomBar2(mode){
+    var s = SIDE2[game2.active];
+    var leftImg = document.getElementById("help-trigger2-img");
+    var rightImg = document.getElementById("btn-parar2-img");
+    if(mode === "confirm"){
+      leftImg.src = "assets/img/" + s.pasta + "_btsim_s.jpg"; leftImg.classList.add("show");
+      rightImg.src = "assets/img/" + s.pasta + "_btnao_s.jpg"; rightImg.classList.add("show");
+    } else {
+      leftImg.classList.remove("show");
+      rightImg.classList.remove("show");
+    }
+  }
+
+  function pickAnswer2(i){
+    if(game2.locked || game2.confirmPending) return;
+    document.querySelectorAll('[id^="ans2-"]').forEach(function(r){ r.classList.remove("picked"); });
+    document.getElementById("ans2-" + i).classList.add("picked");
+    play("certeza2");
+    setBottomBar2("confirm");
+    game2.confirmPending = { type: "answer", index: i };
+  }
+
+  function errarAmount2(idx){
+    if(idx === LADDER.length - 1) return 0;
+    var parar = idx === 0 ? 0 : LADDER[idx - 1];
+    return Math.floor(parar / 2);
+  }
+  // Confirmado TELAJOGO.frm (diferente do TELAJOGO1): coloca_ouro carrega de
+  // \{pasta_do_jogador}\PASTILHAS\ouro{degrau}.jpg — por lado, não da pasta
+  // compartilhada JPGS1.
+  function renderPayout2(){
+    var s = SIDE2[game2.active];
+    document.getElementById("ouro-img2").src = "assets/img/pastilhas_" + s.pasta + "/OURO" + (activePlayer2().idx + 1) + ".jpg";
+    document.getElementById("btn-parar2").disabled = (activePlayer2().idx === 0);
+  }
+
+  var TIMER_SECONDS2 = 41;
+  function startTimer2(){
+    game2.timeLeft = TIMER_SECONDS2;
+    stopLoops();
+    playRandomSuspense();
+    updateTimerUI2();
+    game2.timer = setInterval(function(){
+      game2.timeLeft--;
+      updateTimerUI2();
+      if(game2.timeLeft <= 0){
+        clearInterval(game2.timer);
+        answer2(-1); // confirmado: tempo esgotado = resposta errada
+      }
+    }, 1000);
+  }
+  function updateTimerUI2(){
+    var frame = TIMER_SECONDS2 - 1 - game2.timeLeft;
+    if(frame === 10) frame = 11;
+    frame = Math.max(0, Math.min(40, frame));
+    document.getElementById("timer-clock2").src = "assets/img/relogio_" + frame + ".jpg";
+    document.getElementById("timer-secs2").textContent = Math.max(0, game2.timeLeft);
+  }
+  function lockAnswers2(){
+    document.querySelectorAll(".ans-hit2").forEach(function(b){ b.disabled = true; });
+  }
+
+  // Confirmado: faixa de revelação usa a MESMA tabela/imagens do TELAJOGO1
+  // (\JPGS1\FAIXA{n}.jpg compartilhado, não por pasta de jogador) e NUNCA
+  // se reposiciona por jogador — fica sempre no slot esquerdo (bug real do
+  // original, mantido fielmente).
+  function piscaFaixa2(correctIdx, cb){
+    var img = document.getElementById("faixa-img2");
+    var pos = FAIXA_POS[correctIdx];
+    var size = FAIXA_SIZE[correctIdx];
+    img.style.top = pos.top; img.style.left = pos.left;
+    img.style.width = size.width; img.style.height = size.height;
+    img.src = "assets/img/faixa" + (correctIdx + 1) + ".jpg";
+    var step = 0;
+    var iv = setInterval(function(){
+      step++;
+      img.style.display = (step % 2 === 1) ? "block" : "none";
+      if(step >= 8){ clearInterval(iv); img.style.display = "none"; cb(); }
+    }, 180);
+  }
+
+  function answer2(i){
+    if(game2.locked) return;
+    game2.locked = true;
+    clearTimeout(game2.timer); clearInterval(game2.timer); clearTimeout(game2.voiceHintTimer);
+    stopLoops();
+    var p = activePlayer2();
+    var correct = game2.current.c;
+    lockAnswers2();
+    var wrong = i !== correct;
+    play(wrong ? "errada" : "correta");
+    piscaFaixa2(correct, function(){
+      if(wrong){
+        setTimeout(function(){ finish2(errarAmount2(p.idx)); }, 600);
+        return;
+      }
+      p.idx++;
+      if(p.idx === LADDER.length - 1) play("meiomilho");
+      setTimeout(function(){
+        game2.locked = false;
+        if(p.idx >= LADDER.length){ finish2(LADDER[LADDER.length-1]); }
+        else { alternarTurno2(); goToValendo2(); }
+      }, 600);
+    });
+  }
+
+  // Confirmado VALENDO.frm Form_Activate: enquanto NENHUM jogador terminou,
+  // alterna 1→2→1→2...; se um já terminou, trava no outro.
+  function alternarTurno2(){
+    var p1done = game2.players[1].done, p2done = game2.players[2].done;
+    if(!p1done && !p2done){ game2.active = game2.active === 1 ? 2 : 1; }
+    else if(p1done && !p2done){ game2.active = 2; }
+    else if(!p1done && p2done){ game2.active = 1; }
+  }
+
+  // BUG REAL DO ORIGINAL mantido fielmente (ver comentário no topo deste bloco):
+  // encerra a partida INTEIRA assim que o jogador da vez erra/para/ganha tudo,
+  // mesmo que o outro jogador nunca tenha jogado uma pergunta sequer.
+  function finish2(amount){
+    var p = activePlayer2();
+    p.done = true;
+    finishWith(amount, "bad", p.nome);
+  }
+
+  function showHelpSub2(id){
+    document.querySelectorAll('.help-panel2 > div').forEach(function(d){ d.classList.remove("show"); });
+    document.getElementById(id).classList.add("show");
+  }
+  function closeHelpPanel2(){
+    document.getElementById("help-panel2").classList.remove("show");
+  }
+
+  document.getElementById("help-trigger2").addEventListener("click", function(){
+    if(!game2 || game2.locked) return;
+    if(game2.confirmPending){
+      play("clique");
+      var pending = game2.confirmPending;
+      game2.confirmPending = null;
+      setBottomBar2("normal");
+      if(pending.type === "answer") answer2(pending.index);
+      else if(pending.type === "parar") finish2(LADDER[activePlayer2().idx - 1] || 0);
+      return;
+    }
+    play("clique");
+    showHelpSub2("help-select2");
+    document.getElementById("help-panel2").classList.add("show");
+  });
+  document.getElementById("btn-parar2").addEventListener("click", function(){
+    if(!game2 || game2.locked) return;
+    if(game2.confirmPending){
+      play("clique2");
+      document.querySelectorAll('[id^="ans2-"]').forEach(function(r){ r.classList.remove("picked"); });
+      game2.confirmPending = null;
+      setBottomBar2("normal");
+      return;
+    }
+    if(activePlayer2().idx === 0) return;
+    play("ouro");
+    game2.confirmPending = { type: "parar" };
+    setBottomBar2("confirm");
+  });
+
+  document.querySelectorAll(".help-icon2").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var i = parseInt(btn.dataset.help, 10);
+      var p = activePlayer2();
+      if(p.helpsUsed[i] || game2.locked) return;
+      markHelpUsed2(i);
+      if(i === 0) runCartas2();
+      else if(i === 1) runPlacas2();
+      else if(i === 2) runConvidados2();
+      else runPula2();
+    });
+  });
+
+  var CARTAS_TABLE2 = CARTAS_TABLE; // mesma tabela (rei/as/dois/tres), nomes de arquivo iguais
+  function runCartas2(){
+    var s = SIDE2[game2.active];
+    play("clique");
+    showHelpSub2("help-cartas-panel2");
+    document.getElementById("help-cartas-panel2").style.backgroundImage = "url('assets/img/" + s.pasta + "_tapa_cartas.jpg')";
+    var clicked = false;
+    var cartaImg = document.getElementById("carta-img2");
+    cartaImg.style.display = "none";
+    document.getElementById("carta-clique2").onclick = function(){
+      if(clicked) return; clicked = true;
+      var carta = CARTAS_TABLE2[Math.floor(Math.random() * 4)];
+      play(Math.random() < 0.5 ? "clique" : "tiratres");
+      cartaImg.src = "assets/img/" + s.pasta + "_" + carta.img;
+      cartaImg.style.display = "block";
+      var wrong = [0,1,2,3].filter(function(i){ return i !== game2.current.c; });
+      wrong.sort(function(){ return Math.random() - 0.5; });
+      var toRemove = wrong.slice(0, carta.howMany);
+      var hits = document.querySelectorAll(".ans-hit2");
+      toRemove.forEach(function(i){
+        hits[i].classList.add("dimmed"); hits[i].disabled = true;
+        document.getElementById("ans2-" + i).classList.add("dimmed");
+      });
+      setTimeout(closeHelpPanel2, 1400);
+    };
+  }
+
+  function runPlacas2(){
+    var s = SIDE2[game2.active];
+    play("clique");
+    showHelpSub2("help-placas-panel2");
+    document.getElementById("help-placas-panel2").style.backgroundImage = "url('assets/img/" + s.pasta + "_tapa_placas.jpg')";
+    var correct = game2.current.c + 1;
+    var x = 1 + Math.floor(Math.random() * 51);
+    var base = 100 - x;
+    var restoB = Math.floor((100 - base) / 2);
+    var restoC = Math.floor((100 - base - restoB) / 2);
+    var restoD = restoC;
+    var sequencia = {
+      1: [base, restoD, restoC, restoB], 2: [restoB, base, restoC, restoD],
+      3: [restoD, restoB, base, restoD], 4: [restoB, restoD, restoC, base]
+    };
+    var valores = sequencia[correct];
+    valores.forEach(function(v, i){ document.getElementById("placa2-pct-" + i).textContent = v + "%"; });
+    setTimeout(closeHelpPanel2, 4000);
+  }
+
+  function runConvidados2(){
+    var s = SIDE2[game2.active];
+    play("clique");
+    showHelpSub2("help-convidados-panel2");
+    document.getElementById("help-convidados-panel2").style.backgroundImage = "url('assets/img/" + s.pasta + "_tapa_convidados.jpg')";
+    var CONVIDADOS_TABLE = { 1:[1,3,1], 2:[4,2,2], 3:[4,3,3], 4:[1,4,4] };
+    var guesses = CONVIDADOS_TABLE[game2.current.c + 1];
+    guesses.forEach(function(g, i){ document.getElementById("conv2-pct-" + i).textContent = g; });
+    setTimeout(closeHelpPanel2, 4000);
+  }
+
+  // Confirmado AJUDA_Click (arg_C 3-5, "Pular"): cai no MESMO estado "ESPERA PROXIMA PERGUNTA" de
+  // uma resposta certa normal — ou seja, TAMBÉM passa a vez pro outro jogador (não é o mesmo
+  // jogador tentando de novo na hora). O flag "pulou" fica pendente e só é lido na PRÓXIMA vez
+  // que for a vez deste jogador de novo (mesmo degrau, por isso o decremento não é necessário
+  // aqui — o degrau nunca chegou a avançar pra essa pergunta pulada).
+  function runPula2(){
+    var p = activePlayer2();
+    play("clique");
+    closeHelpPanel2();
+    game2.used[game2.current.n] = true;
+    p.pulou = true;
+    alternarTurno2();
+    goToValendo2();
+  }
+
+  // ---------- Regras (TELREGRAS.frm — 5 páginas, índice 0..4) ----------
+  var rulesPage = 0;
+  function renderRulesPage(){
+    document.getElementById("rules-img").src = "assets/img/REGRA_" + rulesPage + ".jpg";
+  }
+  // Confirmado botao_Click: SEMPRE pisca ACESO no clique (não existe estado desabilitado — nos
+  // limites de página o clique só não avança, mas ainda pisca), volta pra APAGADO depois.
+  function flashRegrasButton(imgId, name){
+    var img = document.getElementById(imgId);
+    img.src = "assets/img/BOTAO_REGRAS_" + name + "_ACESO.jpg";
+    setTimeout(function(){ img.src = "assets/img/BOTAO_REGRAS_" + name + "_APAGADO.jpg"; }, 300);
+  }
+  document.getElementById("rules-prev").addEventListener("click", function(){
+    play("clique22");
+    flashRegrasButton("rules-prev-img", "ANTERIOR");
+    if(rulesPage > 0) rulesPage--;
+    renderRulesPage();
+  });
+  document.getElementById("rules-next").addEventListener("click", function(){
+    play("clique22");
+    flashRegrasButton("rules-next-img", "PROXIMO");
+    if(rulesPage < 4) rulesPage++;
+    renderRulesPage();
+  });
+  document.getElementById("rules-sair").addEventListener("click", function(){
+    play("clique22");
+    flashRegrasButton("rules-sair-img", "SAIR");
+    setTimeout(function(){ show("start"); }, 300);
+  });
+
+  // ---------- Fluxo de telas ----------
+  // Abertura: toca o vídeo original uma vez, com opção de pular
+  var introVideo = document.getElementById("intro-video");
+  // Confirmado JOGREG.frm Form_Activate: toca \audios\tema.wav em loop ao entrar no menu (bug
+  // corrigido: antes essa chamada não existia, o menu ficava mudo)
+  function finishIntro(){ stopLoops(); show("start"); playLoop("tema"); }
+  introVideo.addEventListener("ended", finishIntro); // confirmado: Timer1_Timer aos 22s (duração real do vídeo)
+  // Confirmado APRESENT.frm Form_MouseDown: clique em QUALQUER lugar do form pula — não é um botão
+  document.getElementById("screen-intro").addEventListener("click", function(){
+    introVideo.pause();
+    finishIntro();
+  });
+
+  // Confirmado JOGREG.frm: REGRAS_Click/JOGAR_Click/SAIR_Click tocam \sons\CLIQUE22.WAV, acendem
+  // o FX*_A.jpg correspondente, esperam ~1 "tick" (debounce) e só então navegam.
+  function menuButtonClick(fxId, target){
+    play("clique22");
+    var fx = document.getElementById(fxId);
+    fx.classList.add("show");
+    setTimeout(function(){
+      fx.classList.remove("show");
+      if(target === "sair"){ stopLoops(); }
+      show(target);
+    }, 400);
+  }
+  document.getElementById("btn-regras").addEventListener("click", function(){
+    menuButtonClick("fx-regras", "rules");
+    rulesPage = 0; renderRulesPage();
+  });
+  document.getElementById("btn-jogar").addEventListener("click", function(){
+    menuButtonClick("fx-jogar", "subject");
+  });
+  document.getElementById("btn-sair-menu").addEventListener("click", function(){
+    menuButtonClick("fx-sair", "sair");
+  });
+
+  // Confirmado FRMASSUN.frm (Image*_Click, todas tocam \sons\CLIQUE2.WAV): seleção é toggle de
+  // visibilidade da imagem bt{materia}_a.jpg por cima da bt{materia}_s.jpg do fundo — não CSS.
+  var pendingMaterias = new Set();
+  document.querySelectorAll(".subj-btn").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      play("clique2");
+      var mat = btn.dataset.mat;
+      var fx = document.getElementById("subj-fx-" + mat);
+      if(pendingMaterias.has(mat)){ pendingMaterias.delete(mat); fx.classList.remove("show"); }
+      else { pendingMaterias.add(mat); fx.classList.add("show"); }
+      updateSubjectConfirmBtn();
+    });
+  });
+  // Confirmado Proc_8_18_53BB7C: Image3 (botão final) só fica visível se ALGUMA matéria estiver
+  // marcada — e troca pra btok_a.jpg só no clique (Image3_Click), não enquanto fica habilitado
+  function updateSubjectConfirmBtn(){
+    var enabled = pendingMaterias.size > 0;
+    document.getElementById("btn-subject-confirm").disabled = !enabled;
+    document.getElementById("btn-subject-confirm").style.visibility = enabled ? "visible" : "hidden";
+  }
+  document.getElementById("btn-subject-confirm").addEventListener("click", function(){
+    if(pendingMaterias.size === 0) return;
+    play("clique2");
+    document.getElementById("btn-subject-confirm-img").src = "assets/img/btok_a.jpg"; // confirmado Image3_Click
+    show("name");
+    play("nomeLocucao");
+    document.getElementById("name-input").value = "";
+    document.getElementById("name-input").focus();
+  });
+  // Modo 2 jogadores (new2PGame/game2, mais abaixo) fica implementado no código mas sem entrada
+  // na UI — bate contra o limite de 256 arquivos no manifesto do Artifact (os assets coloridos
+  // por lado do TELAJOGO.frm somam +92 arquivos, estourando o limite) e o usuário decidiu não
+  // usar por enquanto em vez de arriscar mexer no código 1P já testado (sprites no relógio etc)
+  // pra caber. Campo de nome do jogador 2 removido da tela pra não expor um caminho quebrado.
+  document.getElementById("btn-start-game").addEventListener("click", function(){
+    play("clique22"); // confirmado Proc_11_10_53C1A8 (SAIR_Click, que na real é o "jogar"): \SONS\CLIQUE22.wav
+    var nome = document.getElementById("name-input").value.trim() || "JOGADOR";
+    newGame(new Set(pendingMaterias), nome.toUpperCase());
+  });
+  // Confirmado Text1_Change: toca \SONS\LETRA.wav a cada tecla digitada
+  document.getElementById("name-input").addEventListener("input", function(){
+    play("letra");
+  });
+
+  // ---------- Placar (localStorage) ----------
+  function saveScore(nome, valor){
+    var list = JSON.parse(localStorage.getItem("milhao_placar") || "[]");
+    list.push({ nome:nome, valor:valor, data: new Date().toISOString() });
+    list.sort(function(a,b){ return b.valor - a.valor; });
+    list = list.slice(0, 20);
+    localStorage.setItem("milhao_placar", JSON.stringify(list));
+  }
+  // Confirmado PLACARG.frm: exatamente 10 linhas fixas (Label1..20), não uma lista dinâmica
+  function renderBoard(){
+    var list = JSON.parse(localStorage.getItem("milhao_placar") || "[]");
+    for(var i = 0; i < 10; i++){
+      var row = list[i];
+      document.getElementById("board-name-" + i).textContent = row ? row.nome : "";
+      document.getElementById("board-score-" + i).textContent = row ? fmt(row.valor) : "";
+    }
+  }
+  // Confirmação Sim/Não genérica (confirmado no PLACARG.frm: zerar placar não é instantâneo)
+  function confirmDialog(text, onYes){
+    document.getElementById("confirm-text").textContent = text;
+    document.getElementById("confirm-overlay").classList.add("show");
+    function cleanup(){
+      document.getElementById("confirm-overlay").classList.remove("show");
+      yesBtn.removeEventListener("click", yesHandler);
+      noBtn.removeEventListener("click", noHandler);
+    }
+    var yesBtn = document.getElementById("confirm-yes");
+    var noBtn = document.getElementById("confirm-no");
+    function yesHandler(){ play("clique"); cleanup(); onYes(); }
+    function noHandler(){ play("clique"); cleanup(); }
+    yesBtn.addEventListener("click", yesHandler);
+    noBtn.addEventListener("click", noHandler);
+  }
+  document.getElementById("btn-zerar-placar").addEventListener("click", function(){
+    play("certeza2"); // confirmado PLACARG.frm Image1_Click: \audios\CERTEZA2.wav
+    confirmDialog("Tem certeza que quer zerar o placar?", function(){
+      localStorage.removeItem("milhao_placar");
+      renderBoard();
+    });
+  });
+
+})();
+</script>
