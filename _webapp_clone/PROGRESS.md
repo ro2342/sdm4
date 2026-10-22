@@ -332,6 +332,19 @@ Publicado no Artifact + commit/push `main` + `gh-pages` nesta rodada.
 claude-in-chrome)** — preciso que o Rod confirme se resolveu de vez ou se
 ainda escurece.
 
+## Decisão 2026-10-23 — fonte original VB6 subida pra repo privado separado
+
+Rod pediu pra subir os 25 arquivos fonte decompilados (`sdm4new/`) pro
+GitHub também. Avisei que isso é diferente do clone — é o código original
+da empresa (SBT/Softmed), não reimplementação — e perguntei se ele queria
+público ou privado. Escolheu **privado**, num repo separado (não dentro de
+`sdm4`, pra não misturar com o clone público).
+
+**Repo:** https://github.com/ro2342/sdm4-fonte-original (privado) — pasta
+`sdm4new/` com os 25 arquivos (12 `.frm`, 11 `.frx`, `Module1.bas`,
+`Project.vbp`). Cópia feita de `C:\Users\Rod\Downloads\sdm4\sdm4new\`, que
+continua sendo a fonte de trabalho local (esse repo é só backup/histórico).
+
 ## Pendente
 
 Nenhum arquivo `.frm` pendente — os 11 alcançáveis (modo 1 jogador +
