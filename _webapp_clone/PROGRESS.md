@@ -283,6 +283,26 @@ claude.ai, ícone customizado, abre em tela cheia.
 Link do Artifact (`claude.ai/code/artifact/...`) continua funcionando
 também, sem mudança — os dois ficam no ar em paralelo.
 
+## Correção 2026-10-23 (10ª rodada) — Firefox escurecia botões + ouro-pill desalinhado
+
+Rod reportou 2 coisas:
+
+1. **Firefox**: os botões SIM/NÃO (e qualquer botão clicável) ficavam
+   com uma cor mais escura por cima, tipo hover — não acontecia no
+   Chrome. Causa: `background:transparent` não remove a aparência
+   NATIVA de `<button>` no Firefox (ele mantém o visual de botão do SO
+   por baixo, que escurece em hover/clique/foco); precisa de
+   `appearance:none` explícito, que o Chrome já ignora por padrão sem
+   precisar pedir. Adicionado `button{ appearance:none; ... }` global,
+   cobrindo todo botão do projeto de uma vez.
+2. **OURO desalinhado**: medi os 16 arquivos `OURO{1-16}.jpg` reais —
+   todos exatamente 220x61px. Meu CSS usava um arredondamento (34%/12%)
+   em vez da fração exata (34.375%/12.708%) e o canto em pixel exato
+   (413,3). Pequeno mas real — corrigido pra bater exato com o asset.
+
+Publicado nos dois lugares (Artifact via `game.html` + commit/push em
+`main` e `gh-pages`).
+
 ## Pendente
 
 Nenhum arquivo `.frm` pendente — os 11 alcançáveis (modo 1 jogador +
