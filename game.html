@@ -651,18 +651,31 @@
     var t = setTimeout(fire, 4000);
     if(audio.readyState === 0){ try{ audio.load(); }catch(e){} } // só força load() se nem começou
   }
+  // BUG REAL CORRIGIDO: o guard de prontidão (whenAudioReady, rodada 12) só tinha sido aplicado
+  // nos sons de valor dentro de goToValendo() — mas QUALQUER som (Errada.ogg, Rodada1.ogg, etc.)
+  // sofre da mesma corrida se tocado antes do navegador terminar de bufferizar, e esses ~45 outros
+  // sons nunca tinham essa proteção. Rod reportou exatamente isso: som de errar e o Rodada1.ogg da
+  // primeira pergunta do jogo (ambos tocados bem cedo na sessão, quando mais arquivos ainda estão
+  // concorrendo por banda) simplesmente não tocavam. Aplicado aqui pra cobrir literalmente todo
+  // som do jogo de uma vez, não só os de valor.
   function play(name){
     if(muted) return;
     var a = sounds[name];
     if(!a) return;
     stopSom();
     lastSom = a;
-    try{ a.currentTime = 0; a.play().catch(function(){}); }catch(e){}
+    whenAudioReady(a, function(){
+      try{ a.currentTime = 0; }catch(e){}
+      a.play().catch(function(){});
+    });
   }
   function playLoop(name){
     if(muted) return;
     var a = sounds[name];
-    try{ a.currentTime = 0; a.play().catch(function(){}); }catch(e){}
+    whenAudioReady(a, function(){
+      try{ a.currentTime = 0; }catch(e){}
+      a.play().catch(function(){});
+    });
   }
   // Confirmado no código-fonte: a trilha de suspense é sorteada (1-6) uma vez por pergunta, não escalona com o tempo
   function playRandomSuspense(){
