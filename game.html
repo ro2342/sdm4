@@ -626,6 +626,32 @@
   function stopSom(){
     if(lastSom){ try{ lastSom.pause(); }catch(e){} }
   }
+  // BUG REAL CORRIGIDO (relatado pelo usuário: som do valor, ex. v50000.ogg, as vezes não tocava
+  // nenhuma — pulava direto pra pergunta/quale.wav): os ~20 arquivos de valor (v1000..v1000000)
+  // têm preload="auto" desde o carregamento da página, mas o navegador não baixa todos ao mesmo
+  // tempo — em conexão mais lenta ou sessão mais longa, um arquivo que só é usado numa rodada mais
+  // tarde (ex: 50000, 100000...) pode ainda não ter dado suficiente carregado (readyState <
+  // HAVE_CURRENT_DATA) no instante exato em que a rodada chega nele. Chamar .play() nesse estado
+  // pode rejeitar a Promise (ou currentTime=0 falhar) e cair direto no .catch()/advance(), pulando
+  // o áudio inteiro sem esperar. Fix: só chama play() quando o áudio sinalizar que tem dado
+  // suficiente (canplay/loadeddata), com um teto de 4s de espera (curto o bastante pra não atrasar
+  // o jogo, mas suficiente pra não derrubar o áudio por pura falta de buffer).
+  function whenAudioReady(audio, cb){
+    if(audio.readyState >= 2){ cb(); return; }
+    var done = false;
+    function fire(){
+      if(done) return;
+      done = true;
+      audio.removeEventListener("canplay", fire);
+      audio.removeEventListener("loadeddata", fire);
+      clearTimeout(t);
+      cb();
+    }
+    audio.addEventListener("canplay", fire);
+    audio.addEventListener("loadeddata", fire);
+    var t = setTimeout(fire, 4000);
+    if(audio.readyState === 0){ try{ audio.load(); }catch(e){} } // só força load() se nem começou
+  }
   function play(name){
     if(muted) return;
     var a = sounds[name];
@@ -801,17 +827,21 @@
     function playValueSpeech(){
       if(muted || !valueSound){ clearTimeout(safety); advance(); return; }
       stopSom(); lastSom = valueSound;
-      valueSound.currentTime = 0;
-      valueSound.onended = function(){ clearTimeout(safety); advance(); };
-      valueSound.play().catch(function(){ clearTimeout(safety); advance(); });
+      whenAudioReady(valueSound, function(){
+        try{ valueSound.currentTime = 0; }catch(e){}
+        valueSound.onended = function(){ clearTimeout(safety); advance(); };
+        valueSound.play().catch(function(){ clearTimeout(safety); advance(); });
+      });
     }
     if(muted){ playValueSpeech(); }
     else {
       var valorSound = sounds.valor;
       stopSom(); lastSom = valorSound;
-      valorSound.currentTime = 0;
-      valorSound.onended = playValueSpeech;
-      valorSound.play().then(function(){}).catch(playValueSpeech);
+      whenAudioReady(valorSound, function(){
+        try{ valorSound.currentTime = 0; }catch(e){}
+        valorSound.onended = playValueSpeech;
+        valorSound.play().then(function(){}).catch(playValueSpeech);
+      });
     }
   }
 
@@ -1397,17 +1427,21 @@
     function playValueSpeech(){
       if(muted || !valueSound){ clearTimeout(safety); advance(); return; }
       stopSom(); lastSom = valueSound;
-      valueSound.currentTime = 0;
-      valueSound.onended = function(){ clearTimeout(safety); advance(); };
-      valueSound.play().catch(function(){ clearTimeout(safety); advance(); });
+      whenAudioReady(valueSound, function(){
+        try{ valueSound.currentTime = 0; }catch(e){}
+        valueSound.onended = function(){ clearTimeout(safety); advance(); };
+        valueSound.play().catch(function(){ clearTimeout(safety); advance(); });
+      });
     }
     if(muted){ playValueSpeech(); }
     else {
       var valorSound = sounds.valor;
       stopSom(); lastSom = valorSound;
-      valorSound.currentTime = 0;
-      valorSound.onended = playValueSpeech;
-      valorSound.play().then(function(){}).catch(playValueSpeech);
+      whenAudioReady(valorSound, function(){
+        try{ valorSound.currentTime = 0; }catch(e){}
+        valorSound.onended = playValueSpeech;
+        valorSound.play().then(function(){}).catch(playValueSpeech);
+      });
     }
   }
 
