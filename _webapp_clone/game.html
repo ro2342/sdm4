@@ -638,18 +638,24 @@
   function whenAudioReady(audio, cb){
     if(audio.readyState >= 2){ cb(); return; }
     var done = false;
-    function fire(){
+    var deadline = Date.now() + 10000; // teto total bem mais generoso que os 4s anteriores
+    function check(){
       if(done) return;
-      done = true;
-      audio.removeEventListener("canplay", fire);
-      audio.removeEventListener("loadeddata", fire);
-      clearTimeout(t);
-      cb();
+      if(audio.readyState >= 2 || Date.now() >= deadline){
+        done = true;
+        audio.removeEventListener("canplay", check);
+        audio.removeEventListener("loadeddata", check);
+        audio.removeEventListener("canplaythrough", check);
+        cb();
+        return;
+      }
+      setTimeout(check, 250); // continua checando ativamente até o teto, não só uma espera única
     }
-    audio.addEventListener("canplay", fire);
-    audio.addEventListener("loadeddata", fire);
-    var t = setTimeout(fire, 4000);
+    audio.addEventListener("canplay", check);
+    audio.addEventListener("loadeddata", check);
+    audio.addEventListener("canplaythrough", check);
     if(audio.readyState === 0){ try{ audio.load(); }catch(e){} } // só força load() se nem começou
+    check();
   }
   // BUG REAL CORRIGIDO: o guard de prontidão (whenAudioReady, rodada 12) só tinha sido aplicado
   // nos sons de valor dentro de goToValendo() — mas QUALQUER som (Errada.ogg, Rodada1.ogg, etc.)
