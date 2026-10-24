@@ -447,6 +447,61 @@ de valor.
 
 Publicado no Artifact + commit/push em `main` e `gh-pages`.
 
+## Correção 2026-10-24 (15ª rodada) — "sempre os mesmos" invalidou a teoria de corrida/timing, decisão de fazer APK
+
+Depois da 14ª rodada, Rod continuou reportando sons faltando (v3000,
+v4000, v5000 de novo) e, quando perguntado se era aleatório ou sempre
+os mesmos arquivos, respondeu: **"sempre os mesmos por isso eu queria
+fazer um apk"**. Isso descartou de vez a teoria de corrida de rede/
+timing que motivou as rodadas 12-14 (`whenAudioReady` com espera única,
+depois polling de 10s) — um bug de rede seria aleatório, não
+determinístico. `ffprobe`/`volumedetect` nos arquivos "sempre quebrados"
+confirmou que eles não estão corrompidos/mudos. Causa mais provável:
+o navegador despeja da memória alguns dos ~45 áudios + ~195 imagens +
+2 vídeos que ficam todos com carregamento automático ligado desde que
+a página abre — sempre os mesmos por causa da ordem de carregamento
+ser sempre a mesma.
+
+**Decisão**: em vez de mais um patch de JS sem conseguir testar ao vivo,
+Rod confirmou "bora fazer o apk" — empacotar o jogo como app Android
+nativo (WebView com assets 100% locais dentro do pacote), eliminando
+de vez qualquer disputa de memória/rede ligada a carregamento via HTTP.
+
+**Implementação**: projeto Capacitor novo em `C:\Users\Rod\Dev\sdm4\apk\`
+(irmão de `_webapp_clone/`, fora do repo git da pasta do jogo — faz parte
+do mesmo repo `sdm4` na raiz). `www/` é uma cópia de
+`_webapp_clone/assets` + `_webapp_clone/game.html` (renomeado pra
+`index.html`) — **cópia manual, não symlink**: depois de qualquer edição
+em `game.html`, precisa rodar `npm run sync` (dentro de `apk/`) antes de
+rebuildar, senão o APK fica com versão antiga do jogo sem avisar.
+
+- Toolchain usada (já existia na máquina, nada instalado de novo):
+  Android SDK em `C:\Users\Rod\AndroidBuildTools\android-sdk`
+  (platforms 36/37, build-tools 34/36), JDK 21 em
+  `C:\Users\Rod\tools\jdk21\`.
+- `android/local.properties` tem `sdk.dir` apontando pro SDK acima —
+  **não commitado** (é específico da máquina, está no `.gitignore`).
+- Build funcionou de primeira só depois de trocar de Bash pra
+  PowerShell: rodar `gradlew.bat` via Git Bash com `export
+  ANDROID_HOME=...` deu erro genérico do Windows ("The filename,
+  directory name, or volume label syntax is incorrect") — variável de
+  ambiente com `\` setada via `export` do bash corrompe o path no
+  processo filho nativo do Windows. PowerShell com `$env:ANDROID_HOME`
+  funcionou direto.
+- APK debug gerado em
+  `apk/android/app/build/outputs/apk/debug/app-debug.apk` (~16MB,
+  13MB são os assets do jogo embutidos). Mandado pro Rod via
+  SendUserFile pra instalar e testar se o 1 milhão/sons problemáticos
+  se comportam igual com tudo local.
+- `npm run build` (dentro de `apk/`) refaz esse mesmo build depois de
+  um `npm run sync`.
+
+**Ainda não confirmado**: se o APK realmente resolve o "sempre os
+mesmos" (só saberemos quando Rod testar no celular). Build debug, sem
+assinatura de release — se for pra instalar fora de teste pessoal
+(Play Store etc.) precisa gerar keystore de release, não feito ainda
+porque não foi pedido.
+
 ## Pendente
 
 Nenhum arquivo `.frm` pendente — os 11 alcançáveis (modo 1 jogador +
@@ -474,6 +529,14 @@ desativado na UI por causa do limite de arquivos do Artifact (ver acima).
    de loading + `whenAudioReady` da 12ª rodada) — Rod reportou esses
    pulando antes de eu saber que a causa real da tela de 1 milhão travada
    era outra (CSS do vídeo). Ainda não confirmado se o áudio em si está 100%.
+   — **Superado pela 15ª rodada**: "sempre os mesmos" invalida a teoria
+   de corrida de rede que motivou esse fix; o item real agora é o abaixo.
+6. **Confirmar com o Rod se o APK (`apk/`, 15ª rodada) resolve o bug dos
+   sons "sempre os mesmos"** depois de testar no celular — se resolver,
+   os 3 patches de `whenAudioReady` (rodadas 12-14) continuam no código
+   do web (não fazem mal), mas o caminho real passa a ser o APK pra jogar
+   de verdade. Se NÃO resolver, a teoria de memória/eviction do navegador
+   também cai, e o bug é outra coisa ainda não identificada.
 
 ## Como retomar
 

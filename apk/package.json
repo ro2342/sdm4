@@ -1,0 +1,20 @@
+{
+  "name": "apk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync": "node -e \"const fs=require('fs');fs.rmSync('www/assets',{recursive:true,force:true});fs.cpSync('../_webapp_clone/assets','www/assets',{recursive:true});fs.copyFileSync('../_webapp_clone/game.html','www/index.html');\" && npx cap sync android",
+    "build": "cd android && (cmd.exe /c gradlew.bat assembleDebug)"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  }
+}
