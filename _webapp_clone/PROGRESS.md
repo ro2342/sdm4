@@ -427,6 +427,26 @@ antes sem esse problema.
 
 Publicado no Artifact + commit/push em `main` e `gh-pages`.
 
+## Correção 2026-10-24 (14ª rodada) — guard de áudio estendido pra TODO som do jogo, não só os de valor
+
+Depois do fix da tela de 1 milhão (13ª rodada), Rod reportou mais dois
+sons faltando: o som de ERRAR (`Errada.ogg`) e o `Rodada1.ogg` da
+primeira pergunta do jogo inteiro. Ambos tocados bem cedo numa sessão
+(primeira pergunta, primeiro erro possível), quando mais arquivos ainda
+concorrem por banda.
+
+**Causa**: o guard de prontidão `whenAudioReady` (rodada 12) só tinha
+sido aplicado dentro de `goToValendo()`, nos 2 sons de valor — a função
+genérica `play(name)` (usada por ERRAR, ACERTAR, RODADA1/2/3, CLIQUE,
+CERTEZA, TCHAU, literalmente todo o resto) continuava chamando `.play()`
+direto sem esperar o áudio carregar, sofrendo da mesma corrida.
+
+**Fix**: `whenAudioReady` agora envolve `play()` e `playLoop()`
+genéricas também — cobre every single som do jogo de uma vez, não só os
+de valor.
+
+Publicado no Artifact + commit/push em `main` e `gh-pages`.
+
 ## Pendente
 
 Nenhum arquivo `.frm` pendente — os 11 alcançáveis (modo 1 jogador +
