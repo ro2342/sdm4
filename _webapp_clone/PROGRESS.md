@@ -345,6 +345,34 @@ público ou privado. Escolheu **privado**, num repo separado (não dentro de
 `Project.vbp`). Cópia feita de `C:\Users\Rod\Downloads\sdm4\sdm4new\`, que
 continua sendo a fonte de trabalho local (esse repo é só backup/histórico).
 
+## Correção 2026-10-24 (12ª rodada) — som do valor (v50000.ogg etc) as vezes não tocava
+
+Rod reportou jogando no Firefox: saindo da pergunta de 40 mil, a tela de
+50 mil não tocou o áudio falado do valor — foi direto pro `Quale.ogg` da
+pergunta, como se o som tivesse sido pulado.
+
+**Causa real**: os ~20 arquivos de valor (`v1000.ogg`...`v1000000.ogg`) têm
+`preload="auto"` desde o carregamento da página, mas o navegador não baixa
+todos ao mesmo tempo — em conexão mais lenta ou sessão mais longa, um
+arquivo usado só numa rodada mais tarde (50 mil, 100 mil, 1 milhão...) pode
+ainda não ter dado suficiente carregado (`readyState < HAVE_CURRENT_DATA`)
+no instante exato em que a rodada chega nele. Chamar `.play()` nesse estado
+pode rejeitar a Promise (ou `currentTime=0` falhar), caindo direto no
+`.catch()` que já existia pra avançar a rodada — ou seja, o próprio código
+de segurança contra travamento era o que pulava o áudio.
+
+**Fix**: nova função `whenAudioReady(audio, cb)` — só chama `.play()` quando
+o áudio sinaliza `canplay`/`loadeddata` (ou já está pronto), com teto de 4s
+de espera. Aplicado nos dois pontos de reprodução (jingle `valor.ogg` + voz
+do valor) no modo 1 jogador, e espelhado no código dormente do modo 2
+jogadores pra manter consistência.
+
+**Não testado ao vivo** (extensão do Chrome desconectada, Rod jogando no
+Firefox) — publicado por análise de código + raciocínio sobre a causa, não
+por reprodução visual. Pedir confirmação do Rod depois de jogar de novo.
+
+Publicado no Artifact + commit/push em `main` e `gh-pages`.
+
 ## Pendente
 
 Nenhum arquivo `.frm` pendente — os 11 alcançáveis (modo 1 jogador +
