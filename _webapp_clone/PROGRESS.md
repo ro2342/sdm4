@@ -373,6 +373,60 @@ por reprodução visual. Pedir confirmação do Rod depois de jogar de novo.
 
 Publicado no Artifact + commit/push em `main` e `gh-pages`.
 
+## Correção 2026-10-24 (13ª rodada) — recuo das respostas, tela de 1 milhão travava pra sempre, e uma tela de loading que quebrou tudo e foi revertida
+
+Rod finalmente chegou em R$1.000.000 de verdade e mandou print: a tela
+ficava **dividida ao meio pra sempre** — vídeo preto do lado esquerdo
+(com ícone de "mudo" do navegador por cima) e a imagem de fundo (maleta)
+visível do lado direito, sem nunca sair dali. Confirmou: bug antigo, eu
+nunca tinha realmente passado por essa tela end-to-end.
+
+**Causa real encontrada**: a classe CSS `.result-video` tinha uma regra
+antiga e esquecida (`left:50%; width:46%; transform:translateX(-50%)`) —
+sobra de um design anterior onde o vídeo era uma caixinha pequena
+centralizada, não tela cheia. O style inline do elemento (`inset:0;
+width:100%; height:100%`) vence a disputa pra `left`/`width` (inline
+sempre ganha de classe), MAS o `transform` só existia na classe — sem
+concorrente inline, ele continuava aplicando, empurrando a caixa inteira
+(que agora tem 100% de largura) pra ESQUERDA em 50% da própria largura.
+Resultado: metade da caixa (preta) fica visível à esquerda, a outra
+metade cai fora da tela — exatamente o que o print mostrou. **Fix**:
+apaguei a classe `.result-video` inteira (o style inline já cobre tudo
+que precisa, sem decoração nenhuma que não exista no original).
+
+**Segundo bug, mais grave**: a ÚNICA forma de sair da tela de 1 milhão
+era o evento `ended` do vídeo. Se o vídeo não tocasse por QUALQUER motivo
+(navegador bloqueando autoplay com som nesse ponto do fluxo, por
+exemplo), o jogo ficava travado ali PRA SEMPRE, sem nenhuma rede de
+segurança — justamente o maior momento do jogo todo. **Fix**: salvaguarda
+de 13s (duração real do `encerra.mp4` é 10s, medido via ffprobe) que força
+a ida pro placar mesmo se o vídeo falhar silenciosamente, no mesmo padrão
+já usado nos áudios de valor e no VALENDO.frm.
+
+**Recuo das respostas**: Rod reportou aperto demais no texto das 4
+alternativas. Conferi o `.frm`: a Label `resposta` (Left=1080twips=11.25%)
+não tem nenhum indent/alignment especial — os números 1/2/3/4 em círculo
+já vêm IMPRESSOS no fundo `TELA1JOGADOR.jpg`, terminando quase exatamente
+onde a Label começa (confirmado recortando a imagem). O CSS antigo tinha
+`padding-left:14%` (bem mais que o necessário, provavelmente um chute
+inicial nunca revisado) — reduzido pra `2%`.
+
+**Tela de carregamento — tentativa e reversão no mesmo dia**: a sugestão
+do Rod (pré-carregar todos os ~250 assets antes de liberar o jogo, pra
+matar de vez a race condition do áudio) era boa e eu implementei — mas
+logo depois de publicar, Rod reportou "nenhum audio tá tocando a nao ser
+o audio antes das perguntas" (ou seja, quebrou o jogo inteiro, só
+`Quale.ogg` sobrevivia). Não consegui confirmar a causa exata sem
+conseguir testar ao vivo (extensão do Chrome indisponível na sessão,
+Rod jogando no Firefox) — **revertido imediatamente** pra não arriscar
+deixar o jogo quebrado mais tempo. Fica como ideia pendente pra retomar
+só quando eu conseguir testar de verdade antes de publicar (ver
+"Pendente" abaixo). O guard `whenAudioReady` (rodada 12, por sound
+individual) continua ativo — não foi ele que quebrou, já estava no ar
+antes sem esse problema.
+
+Publicado no Artifact + commit/push em `main` e `gh-pages`.
+
 ## Pendente
 
 Nenhum arquivo `.frm` pendente — os 11 alcançáveis (modo 1 jogador +
@@ -390,6 +444,16 @@ desativado na UI por causa do limite de arquivos do Artifact (ver acima).
 3. Detalhes de baixa prioridade sinalizados e **não implementados** (decorativos,
    não afetam lógica): animação de revelação linha-a-linha do PLACARG
    (BARRA0-10 + LETRA.WAV), animação de rotação BitBlt do FRMFIM.
+4. **Tela de carregamento (pré-carregar todos os assets)** — ideia do Rod,
+   tentada e revertida na 13ª rodada por quebrar o áudio do jogo inteiro.
+   Só retomar quando houver um jeito de testar ao vivo ANTES de publicar
+   (extensão do Chrome conectada) — não tentar de novo só por análise de
+   código depois do que aconteceu.
+5. **Confirmar se os áudios de valor (4000, 5000, 20000, 50000, 400000...)
+   realmente pararam de pular** depois do fix da 13ª rodada (reset da tela
+   de loading + `whenAudioReady` da 12ª rodada) — Rod reportou esses
+   pulando antes de eu saber que a causa real da tela de 1 milhão travada
+   era outra (CSS do vídeo). Ainda não confirmado se o áudio em si está 100%.
 
 ## Como retomar
 
